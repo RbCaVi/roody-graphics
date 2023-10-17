@@ -1,0 +1,4 @@
+*.png
+*.apng
+*.gif
+!blocks/**
