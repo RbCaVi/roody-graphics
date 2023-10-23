@@ -135,7 +135,27 @@ def get(vss,xi,yi):
 wafertypes=["accelerometer","capacitor","diode","galvanometer","latch","matcher","potentiometer","sensor","transistor"]
 wiretypes=["detector","port","toggler","trigger","wire"]
 noweldtypes=["copper_ore","iron_ore","pulp","sand","silicon","spawner","telecross"]
-twosidetypes=["wire_spool",'wood']
+twosidetypes=["wire_spool",'wood',"mirror"]
+
+def canweld(side,block):
+	if block['type'] in noweldtypes:
+		return False
+	elif block['type'] in ['cap','flower_magenta','flower_yellow','grass','motor','pedestal','spikes']:
+		sides=[False,False,True,False]
+	elif block['type'] in 'platform':
+		sides=[True,False,False,False]
+	elif block['type'] in ['actuator_head','wire_spool','telewall']:# no sides
+		sides=[True,False,True,False]
+	elif block['type'] in ['combiner','extractor','injector']: # no top/bottom
+		sides=[False,True,False,True]
+	elif block['type'] in ['actuator_base','arc_furnace','beam_core','collector','creator','destroyer','dismantler','magnet','manipulator','mantler','teleportore']:#no top
+		sides=[False,True,True,True]
+	else:
+		return True
+	i={'top':0,'bottom':2,'left':1,'right':3}[side]+block['rotate']
+	i=i%4
+	return sides[i]
+
 
 def makeimage(blocks):
 	xsize=max(map(len,blocks))
@@ -154,11 +174,14 @@ def makeimage(blocks):
 			if block['type']=='air':
 				continue
 			if block['weld']=='all':
-				right=get(newblocks,xi+1,yi)['type']!='air'
-				left=get(newblocks,xi-1,yi)['type']!='air'
-				bottom=get(newblocks,xi,yi+1)['type']!='air'
-				top=get(newblocks,xi,yi-1)['type']!='air'
-				block['weld']=[top,left,bottom,right]
+				block['weld']=[True,True,True,True]
+			weldright=canweld('right',block) and get(newblocks,xi+1,yi)['type']!='air' and canweld('left',get(newblocks,xi+1,yi))
+			weldleft=canweld('left',block) and get(newblocks,xi-1,yi)['type']!='air' and canweld('right',get(newblocks,xi-1,yi))
+			weldbottom=canweld('bottom',block) and get(newblocks,xi,yi+1)['type']!='air' and canweld('top',get(newblocks,xi,yi+1))
+			weldtop=canweld('top',block) and get(newblocks,xi,yi-1)['type']!='air' and canweld('bottom',get(newblocks,xi,yi-1))
+			print(block['weld'])
+			block['weld']=[b and w for b,w in zip(block['weld'],[weldtop,weldleft,weldbottom,weldright])]
+			print(block['weld'])
 			if block['type'] in wafertypes:
 				b=WaferBlock(block['type'])
 			elif block['type']=='wire_board':
