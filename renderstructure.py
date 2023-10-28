@@ -1,4 +1,6 @@
 import base64
+import json
+import block
 
 def derle(a):
     out=[]
@@ -12,11 +14,6 @@ def derle(a):
             out.extend(a[:n])
             a=a[n:]
     return out
-
-f='lair.smp'
-
-with open(f,'r') as file:
-    smpdata=file.read()
 
 def alternate(*fs):
     def getalternated(s):
@@ -83,8 +80,6 @@ def getsmpvalue(s):
             v=[x[1] for x in v]
     return s,v
 
-_,smp=getsmpvalue(smpdata)
-
 def transposedict(d):
     ks,vs=zip(*d.items())
     return [{k:v for k,v in zip(ks,r)} for r in zip(*vs)]
@@ -95,24 +90,9 @@ def makegrid(a,size):
         raise 'wrong size grid'
     return [a[i*w:(i+1)*w] for i in range(h)]
 
-pieces=[
-    makegrid(
-        transposedict({
-            k:[[x,bin(x+256)[3:]][0] for x in derle([*base64.b64decode(v)])] for
-            k,v in
-            x['storage_grid']['tiles'].items()
-        }),
-        x['storage_grid']['dimensions_insertable'].split(',')
-    ) for
-    x in
-    smp['pieces']
-]
-
-import json
 with open('blocks.json','r') as f:
     blocks=json.load(f)
 
-import block
 
 def doublemap(f,xss):
     return [[f(x) for x in xs] for xs in xss]
@@ -127,6 +107,37 @@ def getwelded(b):
 def getrotate(b):
     return b['byteC']%4
 
-pims=[block.makeimage(doublemap(lambda x:(getblockname(x),getrotate(x),getwelded(x)),piece),bsize=16,autoweld=False) for piece in pieces]
+def parsesmp(smpdata):
+    s,smp=getsmpvalue(smpdata)
+    if len(s.strip())>0:
+        raise 'probably not a valid smp'
+    return smp
 
-[i.show() for i in pims]
+def renderstructure(smp):
+    pieces=[
+        makegrid(
+            transposedict({
+                k:[[x,bin(x+256)[3:]][0] for x in derle([*base64.b64decode(v)])] for
+                k,v in
+                x['storage_grid']['tiles'].items()
+            }),
+            x['storage_grid']['dimensions_insertable'].split(',')
+        ) for
+        x in
+        smp['pieces']
+    ]
+
+    pims=[block.makeimage(doublemap(lambda x:(getblockname(x),getrotate(x),getwelded(x)),piece),bsize=16,autoweld=False) for piece in pieces]
+    return pims
+
+if __name__=='__main__':
+    import sys
+    f=sys.argv[0]
+
+    with open(f,'r') as file:
+        smpdata=file.read()
+
+    smp=parsesmp(smpdata)
+
+    pims=renderstructure(smp)
+    [i.show() for i in pims]
