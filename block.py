@@ -21,7 +21,7 @@ class Block:
 
 class NormalBlock:
 	def __init__(self,file,offset=0):
-		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32));
+		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
 	def draw(self,welded,rotate=0):
 		top,left,bottom,right=rotatewelded(welded,rotate)
@@ -54,7 +54,7 @@ def rotatewelded(welded,rotate):
 
 class TwoSideBlock:
 	def __init__(self,file,offset=0):
-		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32));
+		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
 	def draw(self,welded,rotate=0):
 		if rotate==1:
@@ -71,7 +71,7 @@ class TwoSideBlock:
 
 class NoWeldBlock:
 	def __init__(self,file):
-		self.image=PIL.Image.open(f'blocks/noweld/{file}.png').crop((0,0,16,16));
+		self.image=PIL.Image.open(f'blocks/noweld/{file}.png').crop((0,0,16,16)).convert('RGBA')
 
 	def draw(self,_,rotate=0):
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
@@ -80,8 +80,8 @@ class NoWeldBlock:
 
 class WaferBlock:
 	def __init__(self,file,base='wafer',offset=0):
-		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32));
-		self.image=PIL.Image.open(f'blocks/{base}/{file}.png').crop((offset,0,offset+32,32));
+		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
+		self.image=PIL.Image.open(f'blocks/{base}/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
 	def draw(self,welded,rotate=0,offset=(0,0)):
 		top,left,bottom,right=rotatewelded(welded,rotate)
