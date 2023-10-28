@@ -124,7 +124,7 @@ def canweld(side,block):
 	return sides[i]
 
 
-def makeimage(blocks):
+def makeimage(blocks,bsize=128,autoweld=True):
 	xsize=max(map(len,blocks))
 	ysize=len(blocks)
 
@@ -142,13 +142,12 @@ def makeimage(blocks):
 				continue
 			if block['weld']=='all':
 				block['weld']=[True,True,True,True]
-			weldright=canweld('right',block) and get(newblocks,xi+1,yi)['type']!='air' and canweld('left',get(newblocks,xi+1,yi))
-			weldleft=canweld('left',block) and get(newblocks,xi-1,yi)['type']!='air' and canweld('right',get(newblocks,xi-1,yi))
-			weldbottom=canweld('bottom',block) and get(newblocks,xi,yi+1)['type']!='air' and canweld('top',get(newblocks,xi,yi+1))
-			weldtop=canweld('top',block) and get(newblocks,xi,yi-1)['type']!='air' and canweld('bottom',get(newblocks,xi,yi-1))
-			print(block['weld'])
-			block['weld']=[b and w for b,w in zip(block['weld'],[weldtop,weldleft,weldbottom,weldright])]
-			print(block['weld'])
+			if autoweld:
+				weldright=canweld('right',block) and get(newblocks,xi+1,yi)['type']!='air' and canweld('left',get(newblocks,xi+1,yi))
+				weldleft=canweld('left',block) and get(newblocks,xi-1,yi)['type']!='air' and canweld('right',get(newblocks,xi-1,yi))
+				weldbottom=canweld('bottom',block) and get(newblocks,xi,yi+1)['type']!='air' and canweld('top',get(newblocks,xi,yi+1))
+				weldtop=canweld('top',block) and get(newblocks,xi,yi-1)['type']!='air' and canweld('bottom',get(newblocks,xi,yi-1))
+				block['weld']=[[b and w,print(f'welded side {i} not allowed\n'*(not w),end='')][0] for i,b,w in zip(range(4),block['weld'],[weldtop,weldleft,weldbottom,weldright])]
 			if block['type'] in wafertypes:
 				b=WaferBlock(block['type'])
 			elif block['type']=='wire_board':
