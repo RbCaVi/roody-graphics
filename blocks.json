@@ -24,7 +24,7 @@
 	"wire",
 	"wire_board",
 	"port",
-	"toggle",
+	"toggler",
 	"detector",
 	"sensor",
 	"accelerometer",
