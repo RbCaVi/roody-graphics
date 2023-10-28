@@ -8,14 +8,14 @@ class NormalBlock:
 	def __init__(self,file,offset=0):
 		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
-	def draw(self,welded,rotate=0):
+	def draw(self,welded,rotate=0,size=128):
 		top,left,bottom,right=rotatewelded(welded,rotate)
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
 		for x,xside in [(0,left),(8,right)]:
 			for y,yside in [(0,top),(8,bottom)]:
 				im.alpha_composite(self.image.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
 		im=rotateblock(im,rotate)
-		return im.resize((128,128),PIL.Image.NEAREST)
+		return im.resize((size,size),PIL.Image.NEAREST)
 
 def rotateblock(im,rotate):
 	if rotate==0:
@@ -41,7 +41,7 @@ class TwoSideBlock:
 	def __init__(self,file,offset=0):
 		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
-	def draw(self,welded,rotate=0):
+	def draw(self,welded,rotate=0,size=128):
 		if rotate==1:
 			rotate=3
 		if rotate==2:
@@ -52,30 +52,30 @@ class TwoSideBlock:
 			for y,yside in [(0,top),(8,bottom)]:
 				im.alpha_composite(self.image.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
 		im=rotateblock(im,rotate)
-		return im.resize((128,128),PIL.Image.NEAREST)
+		return im.resize((size,size),PIL.Image.NEAREST)
 
 class NoWeldBlock:
 	def __init__(self,file):
 		self.image=PIL.Image.open(f'blocks/noweld/{file}.png').crop((0,0,16,16)).convert('RGBA')
 
-	def draw(self,_,rotate=0):
+	def draw(self,_,rotate=0,size=128):
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
 		im.alpha_composite(self.image.crop((0,0,16,16)))
-		return im.resize((128,128),PIL.Image.NEAREST)
+		return im.resize((size,size),PIL.Image.NEAREST)
 
 class WaferBlock:
 	def __init__(self,file,base='wafer',offset=0):
 		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
 		self.image=PIL.Image.open(f'blocks/{base}/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
-	def draw(self,welded,rotate=0,offset=(0,0)):
+	def draw(self,welded,rotate=0,size=128,offset=(0,0)):
 		top,left,bottom,right=rotatewelded(welded,rotate)
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
 		for x,xside in [(0,left),(8,right)]:
 			for y,yside in [(0,top),(8,bottom)]:
 				im.alpha_composite(self.wafer.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
-		return im.resize((128,128),PIL.Image.NEAREST)
+		return im.resize((size,size),PIL.Image.NEAREST)
 
 
 def normalize(block):
@@ -134,7 +134,7 @@ def makeimage(blocks,bsize=128,autoweld=True):
 			block=normalize(block)
 			newblocks[yi][xi]=block
 
-	im=PIL.Image.new('RGBA',(128*xsize,128*ysize),(0,0,0,0))
+	im=PIL.Image.new('RGBA',(bsize*xsize,bsize*ysize),(0,0,0,0))
 	for xi in range(xsize):
 		for yi in range(ysize):
 			block=get(newblocks,xi,yi)
@@ -160,8 +160,8 @@ def makeimage(blocks,bsize=128,autoweld=True):
 				b=NoWeldBlock(block['type'])
 			else:
 				b=NormalBlock(block['type'])
-			bim=b.draw(block['weld'],block['rotate'])
-			im.alpha_composite(bim,(xi*128,yi*128))
+			bim=b.draw(block['weld'],block['rotate'],size=bsize)
+			im.alpha_composite(bim,(xi*bsize,yi*bsize))
 	return im
 
 if __name__=='__main__':
