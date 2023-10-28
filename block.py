@@ -126,7 +126,7 @@ def canweld(side,block):
 		sides=[True,False,True,False]
 	elif block['type'] in ['combiner','extractor','injector','platform']: # no top/bottom
 		sides=[False,True,False,True]
-	elif block['type'] in ['actuator_base','arc_furnace','beam_core','collector','creator','destroyer','dismantler','magnet','manipulator','mantler','teleportore']:#no top
+	elif block['type'] in ['arc_furnace','beam_core','collector','creator','destroyer','dismantler','magnet','manipulator','mantler','teleportore']:#no top
 		sides=[False,True,True,True]
 	else:
 		return True
