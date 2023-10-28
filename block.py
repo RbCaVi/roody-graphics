@@ -77,6 +77,20 @@ class WaferBlock:
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
+class PlatformBlock:
+	def __init__(self):
+		self.image=PIL.Image.open(f'blocks/platform.png').convert('RGBA')
+		
+	def draw(self,welded,_,size=128,offset=(0,0)):
+		_,left,_,right=welded
+		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
+		y=0
+		if left==0 and right==1 or left==1 and right==0:
+			y=16
+		for x,xside in [(0,left),(8,right)]:
+			print(x,xside,(x+16*xside,0,x+16*xside+8,16))
+			im.alpha_composite(self.image.crop((x+16*xside,y,x+16*xside+8,y+16)),(x,0))
+		return im.resize((size,size),PIL.Image.NEAREST)
 
 def normalize(block):
 	if block is None:
@@ -158,6 +172,10 @@ def makeimage(blocks,bsize=128,autoweld=True):
 				b=TwoSideBlock(block['type'])
 			elif block['type'] in noweldtypes:
 				b=NoWeldBlock(block['type'])
+			elif block['type']=='platform':
+				block['weld'][1]=get(newblocks,xi-1,yi)['type']!='platform' and 2 or block['weld'][1]
+				block['weld'][3]=get(newblocks,xi+1,yi)['type']!='platform' and 2 or block['weld'][3]
+				b=PlatformBlock()
 			else:
 				b=NormalBlock(block['type'])
 			bim=b.draw(block['weld'],block['rotate'],size=bsize)
