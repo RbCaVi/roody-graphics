@@ -77,6 +77,22 @@ class WaferBlock:
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
+class WireBlock:
+	def __init__(self,base,offset=0):
+		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
+		self.image=PIL.Image.open(f'blocks/wire.png').crop((offset,0,offset+32,32)).convert('RGBA')
+
+	def draw(self,welded,rotate=0,size=128,offset=(0,0)):
+		top,left,bottom,right=rotatewelded(welded,rotate)
+		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
+		for x,xside in [(0,left),(8,right)]:
+			for y,yside in [(0,top),(8,bottom)]:
+				im.alpha_composite(self.wafer.crop((x+16*(xside>0),y+16*(yside>0),x+16*(xside>0)+8,y+16*(yside>0)+8)),(x,y))
+		for x,xside in [(0,left),(8,right)]:
+			for y,yside in [(0,top),(8,bottom)]:
+				im.alpha_composite(self.image.crop((x+16*(xside//2+offset[0]),y+16*(yside//2+offset[1]),x+16*(xside//2+offset[0])+8,y+16*(yside//2+offset[1])+8)),(x,y))
+		return im.resize((size,size),PIL.Image.NEAREST)
+
 class PlatformBlock:
 	def __init__(self):
 		self.image=PIL.Image.open(f'blocks/platform.png').convert('RGBA')
@@ -112,8 +128,9 @@ def get(vss,xi,yi):
 		return normalize("air");
 	return vs[xi]
 
-wafertypes=["accelerometer","capacitor","diode","galvanometer","latch","matcher","potentiometer","sensor","transistor"]
+wafertypes=["accelerometer","capacitor","diode","galvanometer","latch","matcher","potentiometer","sensor","transistor","wire_board"]
 wiretypes=["detector","port","toggler","trigger","wire"]
+wiredtypes=["lamp",'combiner']+wafertypes+wiretypes
 noweldtypes=["copper_ore","iron_ore","pulp","sand","silicon","spawner","telecross","air"]
 twosidetypes=["wire_spool",'wood',"mirror"]
 
@@ -159,10 +176,21 @@ def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 				weldbottom=canweld('bottom',block) and canweld('top',get(newblocks,xi,yi+1))
 				weldtop=canweld('top',block) and canweld('bottom',get(newblocks,xi,yi-1))
 				block['weld']=[[b and w,print(f'welded side {i} not allowed on {block}\n'*(not w and debug),end='')][0] for i,b,w in zip(range(4),block['weld'],[weldtop,weldleft,weldbottom,weldright])]
-			if block['type'] in wafertypes:
+			if block['type']=='wire_board' or block['type']=='wire':
+				if block['type']=='wire':
+					b=WireBlock('frame')
+				else:
+					b=WireBlock('wafer')
+				block['weld'][0]=block['weld'][0] and (2 if get(newblocks,xi,yi-1)['type'] in wiredtypes else True)
+				block['weld'][1]=block['weld'][1] and (2 if get(newblocks,xi-1,yi)['type'] in wiredtypes else True)
+				block['weld'][2]=block['weld'][2] and (2 if get(newblocks,xi,yi+1)['type'] in wiredtypes else True)
+				block['weld'][3]=block['weld'][3] and (2 if get(newblocks,xi+1,yi)['type'] in wiredtypes else True)
+				#block['weld'][0]=block['weld'][0] and 2
+				#block['weld'][1]=block['weld'][1] and 2
+				#block['weld'][2]=block['weld'][2] and 2
+				#block['weld'][3]=block['weld'][3] and 2
+			elif block['type'] in wafertypes:
 				b=WaferBlock(block['type'])
-			elif block['type']=='wire_board':
-				b=WaferBlock('wire','wafer')
 			elif block['type'] in wiretypes:
 				b=WaferBlock(block['type'],'frame')
 			elif block['type'] in twosidetypes:
