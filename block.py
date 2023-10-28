@@ -66,6 +66,7 @@ class NoWeldBlock:
 class WaferBlock:
 	def __init__(self,file,base='wafer',offset=0):
 		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
+		self.wire=PIL.Image.open(f'blocks/wire.png').crop((offset,0,offset+32,32)).convert('RGBA')
 		self.image=PIL.Image.open(f'blocks/{base}/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
 	def draw(self,welded,rotate=0,size=128,offset=(0,0)):
@@ -73,7 +74,10 @@ class WaferBlock:
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
 		for x,xside in [(0,left),(8,right)]:
 			for y,yside in [(0,top),(8,bottom)]:
-				im.alpha_composite(self.wafer.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
+				im.alpha_composite(self.wafer.crop((x+16*(xside>0),y+16*(yside>0),x+16*(xside>0)+8,y+16*(yside>0)+8)),(x,y))
+		for x,xside in [(0,left),(8,right)]:
+			for y,yside in [(0,top),(8,bottom)]:
+				im.alpha_composite(self.wire.crop((x+16*(xside//2+offset[0]),y+16*(yside//2+offset[1]),x+16*(xside//2+offset[0])+8,y+16*(yside//2+offset[1])+8)),(x,y))
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
@@ -181,14 +185,6 @@ def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 					b=WireBlock('frame')
 				else:
 					b=WireBlock('wafer')
-				block['weld'][0]=block['weld'][0] and (2 if get(newblocks,xi,yi-1)['type'] in wiredtypes else True)
-				block['weld'][1]=block['weld'][1] and (2 if get(newblocks,xi-1,yi)['type'] in wiredtypes else True)
-				block['weld'][2]=block['weld'][2] and (2 if get(newblocks,xi,yi+1)['type'] in wiredtypes else True)
-				block['weld'][3]=block['weld'][3] and (2 if get(newblocks,xi+1,yi)['type'] in wiredtypes else True)
-				#block['weld'][0]=block['weld'][0] and 2
-				#block['weld'][1]=block['weld'][1] and 2
-				#block['weld'][2]=block['weld'][2] and 2
-				#block['weld'][3]=block['weld'][3] and 2
 			elif block['type'] in wafertypes:
 				b=WaferBlock(block['type'])
 			elif block['type'] in wiretypes:
@@ -203,6 +199,15 @@ def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 				b=PlatformBlock()
 			else:
 				b=NormalBlock(block['type'])
+			if block['type'] in wafertypes+wiretypes:
+				block['weld'][0]=block['weld'][0] and (2 if get(newblocks,xi,yi-1)['type'] in wiredtypes else True)
+				block['weld'][1]=block['weld'][1] and (2 if get(newblocks,xi-1,yi)['type'] in wiredtypes else True)
+				block['weld'][2]=block['weld'][2] and (2 if get(newblocks,xi,yi+1)['type'] in wiredtypes else True)
+				block['weld'][3]=block['weld'][3] and (2 if get(newblocks,xi+1,yi)['type'] in wiredtypes else True)
+				#block['weld'][0]=block['weld'][0] and 2
+				#block['weld'][1]=block['weld'][1] and 2
+				#block['weld'][2]=block['weld'][2] and 2
+				#block['weld'][3]=block['weld'][3] and 2
 			bim=b.draw(block['weld'],block['rotate'],size=bsize)
 			im.alpha_composite(bim,(xi*bsize,yi*bsize))
 	return im
