@@ -1,21 +1,6 @@
 import PIL
 import PIL.Image
 
-class Layer:
-	def __init__(self,file,x,y,tilesize):
-		im=PIL.Image.open(file)
-		self.image=im.crop((x*tilesize,y*tilesize,(x+1)*tilesize,(y+1)*tilesize))
-
-class Block:
-	def __init__(self,layers):
-		d
-
-	def draw(self):
-		im=PIL.Image.new('RGBA',(self.size,self.size),(0,0,0,0))
-		for layer in self.layers:
-			im.alpha_composite(layer.image)
-		return im
-
 #welded=top,left,bottom,right
 #rotate= 0    1    2      3
 
@@ -90,26 +75,8 @@ class WaferBlock:
 			for y,yside in [(0,top),(8,bottom)]:
 				im.alpha_composite(self.wafer.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
-		#im=rotateblock(im,rotate)
 		return im.resize((128,128),PIL.Image.NEAREST)
 
-'''
-x=NormalBlock('residue')
-i=x.draw([False,True,True,False])
-i.show()
-
-x=NormalBlock('arc_furnace')
-i=x.draw([True,True,True,False])
-i.show()
-
-x=NormalBlock('arc_furnace',32)
-i=x.draw([False,True,True,False])
-i.show()
-
-x=WaferBlock('accelerometer')
-i=x.draw([False,True,True,False])
-i.show()
-'''
 
 def normalize(block):
 	if block is None:
