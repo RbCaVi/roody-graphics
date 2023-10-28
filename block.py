@@ -198,35 +198,40 @@ def makeimage(blocks):
 			im.alpha_composite(bim,(xi*128,yi*128))
 	return im
 
-blocks=[
-	['iron_bar',{"type":'wire_spool',"rotate":1,"weld":[False,False,True,False]}],
-	['air','iron_bar'],
-]
-im=makeimage(blocks)
-im.show()
-im.save('recipe.png')
+if __name__=='__main__':
+	blocks=[
+		['iron_bar',{"type":'wire_spool',"rotate":2,"weld":[False,False,True,False]}],
+		['air','iron_bar'],
+	]
+	im=makeimage(blocks)
+	im.show()
+	im.save('recipe.png')
 
-blocks=[
-	['cast_iron',{"type":'wire_spool',"rotate":2,"weld":[False,False,True,False]}],
-	['cast_iron','cast_iron'],
-]
-im=makeimage(blocks)
-im.show()
-im.save('frecipe.png')
+	blocks=[
+		['cast_iron',{"type":'wire_spool',"rotate":2,"weld":[False,False,True,False]}],
+		['cast_iron','cast_iron'],
+	]
+	#im=makeimage(blocks)
+	#im.show()
+	#im.save('frecipe.png')
 
-leftspool={"type":'wire_spool',"rotate":1,"weld":[False,False,False,True]}
-rightspool={"type":'wire_spool',"rotate":1,"weld":[False,True,False,False]}
+	leftspool={"type":'wire_spool',"rotate":1,"weld":[False,False,False,True]}
+	rightspool={"type":'wire_spool',"rotate":1,"weld":[False,True,False,False]}
 
-blocks=[
-	[leftspool,'iron_bar',rightspool],
-	[leftspool,'iron_bar',rightspool],
-	[leftspool,'iron_bar',rightspool],
-]
-im=makeimage(blocks)
-im.show()
-im.save('inductor.png')
+	blocks=[
+		[leftspool,'iron_bar',rightspool],
+		[leftspool,'iron_bar',rightspool],
+		[leftspool,'iron_bar',rightspool],
+	]
+	#im=makeimage(blocks)
+	#im.show()
+	#im.save('inductor.png')
 
-im1=makeimage([['wire','glass']])
-im2=makeimage([['wire_board','glass']])
+	#im1=makeimage([['wire','glass']])
+	#im2=makeimage([['wire_board','glass']])
 
-im1.save('E.apng', duration=500, save_all=True, append_images=[im2],loop=0,disposal=0,blend=0)
+	#im1.save('E.apng', duration=500, save_all=True, append_images=[im2],loop=0,disposal=0,blend=0)
+	#im1.save('E.gif', duration=500, save_all=True, append_images=[im2],loop=0,disposal=2)
+
+	#im=PIL.Image.open('E.apng')
+	#im.show()
