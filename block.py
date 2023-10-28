@@ -101,7 +101,7 @@ def get(vss,xi,yi):
 
 wafertypes=["accelerometer","capacitor","diode","galvanometer","latch","matcher","potentiometer","sensor","transistor"]
 wiretypes=["detector","port","toggler","trigger","wire"]
-noweldtypes=["copper_ore","iron_ore","pulp","sand","silicon","spawner","telecross"]
+noweldtypes=["copper_ore","iron_ore","pulp","sand","silicon","spawner","telecross","air"]
 twosidetypes=["wire_spool",'wood',"mirror"]
 
 def canweld(side,block):
