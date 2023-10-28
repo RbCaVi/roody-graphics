@@ -85,10 +85,9 @@ class PlatformBlock:
 		_,left,_,right=welded
 		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
 		y=0
-		if left==0 and right==1 or left==1 and right==0:
+		if left==0 and right==1 or left==1 and right==0 or left==0 and right==0:
 			y=16
 		for x,xside in [(0,left),(8,right)]:
-			print(x,xside,(x+16*xside,0,x+16*xside+8,16))
 			im.alpha_composite(self.image.crop((x+16*xside,y,x+16*xside+8,y+16)),(x,0))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
@@ -123,8 +122,6 @@ def canweld(side,block):
 		return False
 	elif block['type'] in ['cap','flower_magenta','flower_yellow','grass','motor','pedestal','spikes']:
 		sides=[False,False,True,False]
-	elif block['type'] in 'platform':
-		sides=[True,False,False,False]
 	elif block['type'] in ['actuator_head','wire_spool','telewall']:# no sides
 		sides=[True,False,True,False]
 	elif block['type'] in ['combiner','extractor','injector','platform']: # no top/bottom
@@ -173,8 +170,8 @@ def makeimage(blocks,bsize=128,autoweld=True):
 			elif block['type'] in noweldtypes:
 				b=NoWeldBlock(block['type'])
 			elif block['type']=='platform':
-				block['weld'][1]=get(newblocks,xi-1,yi)['type']!='platform' and 2 or block['weld'][1]
-				block['weld'][3]=get(newblocks,xi+1,yi)['type']!='platform' and 2 or block['weld'][3]
+				block['weld'][1]=block['weld'][1] and (2 if get(newblocks,xi-1,yi)['type']!='platform' else True)
+				block['weld'][3]=block['weld'][3] and (2 if get(newblocks,xi+1,yi)['type']!='platform' else True)
 				b=PlatformBlock()
 			else:
 				b=NormalBlock(block['type'])
