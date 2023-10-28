@@ -85,7 +85,7 @@ def normalize(block):
 		return {"type":block,"rotate":0,"weld":"all"}
 	if type(block) in [tuple,list]:
 		out={"type":'air',"rotate":0,"weld":'all'}
-		out.update(dict(zip(block,["type","rotate","weld"])))
+		out.update(dict(zip(["type","rotate","weld"],block)))
 		return out
 	out={"type":'air',"rotate":0,"weld":'all'}
 	out.update(block)
