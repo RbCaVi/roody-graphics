@@ -135,7 +135,7 @@ def canweld(side,block):
 	return sides[i]
 
 
-def makeimage(blocks,bsize=128,autoweld=True):
+def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 	xsize=max(map(len,blocks))
 	ysize=len(blocks)
 
