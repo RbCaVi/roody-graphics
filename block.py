@@ -136,7 +136,7 @@ wafertypes=["accelerometer","capacitor","diode","galvanometer","latch","matcher"
 wiretypes=["detector","port","toggler","trigger","wire"]
 wiredtypes=["lamp",'combiner']+wafertypes+wiretypes
 noweldtypes=["copper_ore","iron_ore","pulp","sand","silicon","spawner","telecross","air"]
-twosidetypes=["wire_spool",'wood',"mirror"]
+twowaytypes=["wire_spool",'wood',"mirror"]
 
 def canweld(side,block):
 	if block['type'] in noweldtypes:
@@ -189,7 +189,7 @@ def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 				b=WaferBlock(block['type'])
 			elif block['type'] in wiretypes:
 				b=WaferBlock(block['type'],'frame')
-			elif block['type'] in twosidetypes:
+			elif block['type'] in twowaytypes:
 				b=TwoSideBlock(block['type'])
 			elif block['type'] in noweldtypes:
 				b=NoWeldBlock(block['type'])
