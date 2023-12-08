@@ -111,6 +111,24 @@ class PlatformBlock:
 			im.alpha_composite(self.image.crop((x+16*xside,y,x+16*xside+8,y+16)),(x,0))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
+class ActuatorBlock:
+	def __init__(self,offset=0):
+		self.base=PIL.Image.open(f'blocks/actuator_base.png').crop((0,0,32,32)).convert('RGBA')
+		self.head=PIL.Image.open(f'blocks/actuator_head.png').crop((0,0,32,32)).convert('RGBA')
+
+	def draw(self,welded,rotate=0,size=128):
+		headtop,baseleft,basebottom,baseright=rotatewelded(welded,rotate)
+		basetop,headleft,headbottom,headright=[True,False,True,False]
+		im=PIL.Image.new('RGBA',(16,16),(0,0,0,0))
+		for x,xside in [(0,headleft),(8,headright)]:
+			for y,yside in [(0,headtop),(8,headbottom)]:
+				im.alpha_composite(self.head.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
+		for x,xside in [(0,baseleft),(8,baseright)]:
+			for y,yside in [(0,basetop),(8,basebottom)]:
+				im.alpha_composite(self.base.crop((x+16*xside,y+16*yside,x+16*xside+8,y+16*yside+8)),(x,y))
+		im=rotateblock(im,rotate)
+		return im.resize((size,size),PIL.Image.NEAREST)
+
 def normalize(block):
 	if block is None:
 		return {"type":'air',"rotate":0,"weld":'all'}
@@ -197,6 +215,8 @@ def makeimage(blocks,bsize=128,autoweld=True,debug=False):
 				block['weld'][1]=block['weld'][1] and (2 if get(newblocks,xi-1,yi)['type']!='platform' else True)
 				block['weld'][3]=block['weld'][3] and (2 if get(newblocks,xi+1,yi)['type']!='platform' else True)
 				b=PlatformBlock()
+			elif block['type']=='actuator':
+				b=ActuatorBlock()
 			else:
 				b=NormalBlock(block['type'])
 			if block['type'] in wafertypes+wiretypes:
