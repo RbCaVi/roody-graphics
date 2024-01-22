@@ -1,3 +1,8 @@
+import base64
+import json
+import block
+from rle import derle
+
 def transposedict(d):
     ks,vs=zip(*d.items())
     return [{k:v for k,v in zip(ks,r)} for r in zip(*vs)]

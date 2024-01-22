@@ -1,8 +1,4 @@
-import base64
-import json
-import block
 from smp import getsmpvalue
-from rle import derle
 from renderblocks import rendergrid
 
 def parsesmp(smpdata):
