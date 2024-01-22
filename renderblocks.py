@@ -4,7 +4,7 @@ import block
 from rle import derle
 
 def transposedict(d):
-    ks,vs=zip(*d.items())
+    ks,vs=zip(*filter(lambda x:x[0][:4]=='byte',d.items()))
     return [{k:v for k,v in zip(ks,r)} for r in zip(*vs)]
 
 def makegrid(a,size):
