@@ -43,27 +43,35 @@ def getwelded(b):
 def getrotate(b):
     return b['byteC']%4
 
+def getblockdata(b):
+    return getblockname(b),getrotate(b),getwelded(b)
+
 def parsesmp(smpdata):
     s,smp=getsmpvalue(smpdata)
     if len(s.strip())>0:
         raise Exception(f'probably not a valid smp: "{s}" was at the end')
     return smp
 
+def decodestructure(s):
+    return {
+        k:derle([*base64.b64decode(v)]) for
+        k,v in
+        s.items()
+    }
+
+def rendergrid(grid,dims):
+    g=makegrid(transposedict(grid),dims)
+    return block.makeimage(doublemap(getblockdata,g),bsize=16,autoweld=False)
+
 def renderstructure(smp):
-    pieces=[
-        makegrid(
-            transposedict({
-                k:[[x,bin(x+256)[3:]][0] for x in derle([*base64.b64decode(v)])] for
-                k,v in
-                x['storage_grid']['tiles'].items()
-            }),
+    pims=[
+        rendergrid(
+            x['storage_grid']['tiles'],
             x['storage_grid']['dimensions_insertable'].split(',')
-        ) for
-        x in
+        ) for x in
         smp['pieces']
     ]
 
-    pims=[block.makeimage(doublemap(lambda x:(getblockname(x),getrotate(x),getwelded(x)),piece),bsize=16,autoweld=False) for piece in pieces]
     return pims
 
 if __name__=='__main__':
