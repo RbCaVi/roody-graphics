@@ -68,7 +68,7 @@ def renderstructure(smp):
 
 if __name__=='__main__':
     import sys
-    f=sys.argv[0]
+    f=sys.argv[1]
 
     with open(f,'r') as file:
         smpdata=file.read()
@@ -76,4 +76,11 @@ if __name__=='__main__':
     smp=parsesmp(smpdata)
 
     pims=renderstructure(smp)
-    [i.show() for i in pims]
+    d=f.rsplit('.',1)[0]
+    import os
+    dims=[x['storage_grid']['dimensions_insertable'] for x in smp['pieces']]
+    os.makedirs(d,exist_ok=True)
+    [im.save(d+'/'+str(i)+".png") for i,im in enumerate(pims)]
+    assert all(x == dims[0] for x in dims) # all tiles are the same size
+    #structure
+    
