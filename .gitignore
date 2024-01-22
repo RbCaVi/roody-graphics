@@ -2,3 +2,8 @@
 *.apng
 *.gif
 !blocks/**
+.eslintrc.js
+*.smp
+test.json
+__target__/
+__pycache__
