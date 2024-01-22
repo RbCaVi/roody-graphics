@@ -1,6 +1,7 @@
 import base64
 import json
 import block
+from smp import getsmpvalue
 
 def derle(a):
     out=[]
@@ -14,71 +15,6 @@ def derle(a):
             out.extend(a[:n])
             a=a[n:]
     return out
-
-def alternate(*fs):
-    def getalternated(s):
-        starts=s
-        for i,f in enumerate(fs):
-            s,v=f(starts)
-            if v is not None:
-                return s,[i,v]
-        return starts,None
-    return getalternated
-
-def concat(*fs):
-    def getconcated(s):
-        starts=s
-        out=[]
-        for f in fs:
-            s,v=f(s)
-            if v is None:
-                return starts,None
-            out.append(v)
-        return s,out
-    return getconcated
-
-def repeat(f):
-    def getrepeated(s):
-        starts=s
-        out=[]
-        while True:
-            s,v=f(s)
-            if v is None:
-                break
-            out.append(v)
-        if len(out)==0:
-            return starts,None
-        return s,out
-    return getrepeated
-
-def getword(s):
-    s=s.lstrip()
-    i=0
-    while i<len(s) and s[i]!='}' and s[i]!=']':
-        i=i+1
-    return s[i:],s[:i]
-
-def ps(pattern):
-    def gets(s):
-        s=s.lstrip()
-        if s.startswith(pattern):
-            return s[len(pattern):],pattern
-        return s,None
-    return gets
-
-def getsmpvalue(s):
-    s,v=alternate(
-        repeat(concat(ps('{'),getword,ps('}'),ps(':'),ps('{'),getsmpvalue,ps('}'))),
-        repeat(concat(ps('['),getsmpvalue,ps(']'))),
-        getword
-    )(s)
-    if v is not None:
-        vid,v=v
-        if vid==0:
-            v={x[1]:x[5] for x in v}
-        if vid==1:
-            v=[x[1] for x in v]
-    return s,v
 
 def transposedict(d):
     ks,vs=zip(*d.items())
@@ -110,7 +46,7 @@ def getrotate(b):
 def parsesmp(smpdata):
     s,smp=getsmpvalue(smpdata)
     if len(s.strip())>0:
-        raise 'probably not a valid smp'
+        raise Exception(f'probably not a valid smp: "{s}" was at the end')
     return smp
 
 def renderstructure(smp):
