@@ -105,15 +105,27 @@ def gettilegrids(savedata):
 if __name__=='__main__':
   import sys
   import os
-  savefile=sys.argv[1]
-  #savefile="/home/rvail/Desktop/games/roody 0.9.8/saves/test/r-1_-1.rsv"
+  savefolder=sys.argv[1]
 
-  with open(savefile,'rb') as f:
-    savedata=f.read()
-
-  tilegrids=gettilegrids(savedata)
-  ims=[(rendergrid(tilegrid,(64,64)),tilegrid['posX'],tilegrid['posY']) for tilegrid in tilegrids]
-  d=os.path.join(os.path.dirname(savefile),'images')
+  d=os.path.join(savefolder,'images')
   os.makedirs(d,exist_ok=True)
-  [im.save(os.path.join(d,f"{x}_{y}.png")) for im,x,y in ims]
+
+  for filename in os.listdir(savefolder):
+    if not filename.endswith('.rsv'):
+      continue
+    print(filename)
+    savefile=os.path.join(savefolder,filename)
+    with open(savefile,'rb') as f:
+      savedata=f.read()
+
+    try:
+      tilegrids=gettilegrids(savedata)
+      for tilegrid in tilegrids:
+        try:
+          im,x,y=rendergrid(tilegrid,(64,64)),tilegrid['posX'],tilegrid['posY']
+        except Exception as e:
+          print('rgerr',e,x,y)
+        im.save(os.path.join(d,f"{x}_{y}.png"))
+    except Exception as e:
+      print('err',e)
     
