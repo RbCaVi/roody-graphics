@@ -85,7 +85,20 @@ def gettilegrids(savedata):
 
   chunkheaders=[getchunkheader(loc,chunks_offset) for loc in chunklocations]
 
-  tilegrids=[gettilegrid(savedata,ch,chunks_offset) for ch in chunkheaders]
+  tilegrids=[]
+  for ch in chunkheaders:
+    try:
+      tilegrid=gettilegrid(savedata,ch,chunks_offset)
+      print(tilegrid['posX'],tilegrid['posY'])
+      tilegrids.append(tilegrid)
+    except Exception as e:
+      offset=chunks_offset+ch['grid_offset']+4
+      tilegrid=savedata[offset:offset+ch['grid_size']]
+      tilegridheader=decodetilegridheader(tilegrid[:tilegridheadersize])
+      print('tgerr',e,tilegridheader,tilegridheader['len'])
+      print('tgerr',tilegridheader['len'])
+      print('tgerr',len(tilegrid[:tilegridheader['len']]))
+      print('tgerr',tilegridheader['A_size']+tilegridheader['B_size']+tilegridheader['C_size']+tilegridheader['D_size']+tilegridheader['E_size']+tilegridheadersize)
 
   return tilegrids
 

@@ -10,7 +10,7 @@ def transposedict(d):
 def makegrid(a,size):
     w,h=map(int,size)
     if len(a)!=w*h:
-        raise 'wrong size grid'
+        raise Exception('wrong size grid')
     return [a[i*w:(i+1)*w] for i in range(h)]
 
 with open('blocks.json','r') as f:
