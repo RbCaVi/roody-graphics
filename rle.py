@@ -1,7 +1,6 @@
 import struct
 
 def derle(data):
-  print(data)
   out=[]
   while len(data)>0:
     n,=struct.unpack('<b',data[:1])
@@ -18,5 +17,4 @@ def derle(data):
       data=data[n:]
     elif n==0:
       raise Exception('end of rle marker')
-  print(len(out))
   return out

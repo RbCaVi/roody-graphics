@@ -48,32 +48,25 @@ def gettilegrid(savedata,ch,chunks_offset):
   offset=chunks_offset+ch['grid_offset']+4
   tilegrid=savedata[offset:offset+ch['grid_size']]
   tilegridheader=decodetilegridheader(tilegrid[:tilegridheadersize])
-  print(len(tilegrid[:tilegridheader['len']]))
-  print(tilegridheader)
   offsetA=tilegridheader['A_offset']
   sizeA=tilegridheader['A_size']
   dataA=tilegrid[offsetA:offsetA+sizeA]
-  print('A',dataA,tilegridheader['A_offset'],tilegridheader['A_size'])
   tilesA=derle(dataA)
   offsetB=tilegridheader['B_offset']
   sizeB=tilegridheader['B_size']
   dataB=tilegrid[offsetB:offsetB+sizeB]
-  print('B',dataB,tilegridheader['B_offset'],tilegridheader['B_size'])
   tilesB=derle(dataB)
   offsetC=tilegridheader['C_offset']
   sizeC=tilegridheader['C_size']
   dataC=tilegrid[offsetC:offsetC+sizeC]
-  print('C',dataC,tilegridheader['C_offset'],tilegridheader['C_size'])
   tilesC=derle(dataC)
   offsetD=tilegridheader['D_offset']
   sizeD=tilegridheader['D_size']
   dataD=tilegrid[offsetD:offsetD+sizeD]
-  print('D',dataD,tilegridheader['D_offset'],tilegridheader['D_size'])
   tilesD=derle(dataD)
   offsetE=tilegridheader['E_offset']
   sizeE=tilegridheader['E_size']
   dataE=tilegrid[offsetE:offsetE+sizeE]
-  print('E',dataE,tilegridheader['E_offset'],tilegridheader['E_size'])
   tilesE=derle(dataE)
   return {
     "byteA":tilesA,
