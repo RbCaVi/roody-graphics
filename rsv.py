@@ -1,5 +1,6 @@
 import struct
 from rle import derle
+from smp import getsmpvalue
 
 headerformat="<IxxxxqqIIII"
 chunklocationformat="<qqIxxxx"
@@ -191,17 +192,17 @@ def readsave(savedata):
 	]) # all tilegrids have full byteE grids
 
 	tiledynamics=[
-		data[
+		getsmpvalue(data[
 	  	header['chunks_offset']+loc['offset']+ch['tiledata_offset']:
 	  	header['chunks_offset']+loc['offset']+ch['tiledata_offset']+ch['tiledata_size']
-	  ] for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
+	  ].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
 	entities=[
-		data[
+		getsmpvalue(data[
 	  	header['chunks_offset']+loc['offset']+ch['entities_offset']:
 	  	header['chunks_offset']+loc['offset']+ch['entities_offset']+ch['entities_size']
-	  ] for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
+	  ].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
 	return {
