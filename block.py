@@ -4,7 +4,25 @@ import PIL.Image
 #welded=top,left,bottom,right
 #rotate= 0    1    2      3
 
-class NormalBlock:
+# https://stackoverflow.com/a/13054570
+class Block:
+	cache = []
+
+	@classmethod
+	def __getCache(cls, key):
+		for k,v in cls.cache:
+			if k==key:
+				return v
+		return None
+	def __new__(cls, *args, **kwargs):
+		existing = cls.__getCache([args,kwargs])
+		if existing is not None:
+			return existing
+		block = super(Block, cls).__new__(cls)
+		cls.cache.append([[args,kwargs],block])
+		return block
+
+class NormalBlock(Block):
 	def __init__(self,file,offset=0):
 		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
@@ -37,7 +55,7 @@ def rotatewelded(welded,rotate):
 	if rotate==2:
 		return [welded[i] for i in [2,1,0,3]]
 
-class TwoSideBlock:
+class TwoSideBlock(Block):
 	def __init__(self,file,offset=0):
 		self.image=PIL.Image.open(f'blocks/{file}.png').crop((offset,0,offset+32,32)).convert('RGBA')
 
@@ -54,7 +72,7 @@ class TwoSideBlock:
 		im=rotateblock(im,rotate)
 		return im.resize((size,size),PIL.Image.NEAREST)
 
-class NoWeldBlock:
+class NoWeldBlock(Block):
 	def __init__(self,file):
 		self.image=PIL.Image.open(f'blocks/noweld/{file}.png').crop((0,0,16,16)).convert('RGBA')
 
@@ -63,7 +81,7 @@ class NoWeldBlock:
 		im.alpha_composite(self.image.crop((0,0,16,16)))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
-class WaferBlock:
+class WaferBlock(Block):
 	def __init__(self,file,base='wafer',offset=0):
 		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
 		self.wire=PIL.Image.open(f'blocks/wire.png').crop((offset,0,offset+32,32)).convert('RGBA')
@@ -81,7 +99,7 @@ class WaferBlock:
 		im.alpha_composite(self.image.crop((16*offset[0],16*offset[1],16*(offset[0]+1),16*(offset[1]+1))).rotate(90*rotate))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
-class WireBlock:
+class WireBlock(Block):
 	def __init__(self,base,offset=0):
 		self.wafer=PIL.Image.open(f'blocks/{base}.png').crop((0,0,32,32)).convert('RGBA')
 		self.image=PIL.Image.open(f'blocks/wire.png').crop((offset,0,offset+32,32)).convert('RGBA')
@@ -97,7 +115,7 @@ class WireBlock:
 				im.alpha_composite(self.image.crop((x+16*(xside//2+offset[0]),y+16*(yside//2+offset[1]),x+16*(xside//2+offset[0])+8,y+16*(yside//2+offset[1])+8)),(x,y))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
-class PlatformBlock:
+class PlatformBlock(Block):
 	def __init__(self):
 		self.image=PIL.Image.open(f'blocks/platform.png').convert('RGBA')
 		
@@ -111,7 +129,7 @@ class PlatformBlock:
 			im.alpha_composite(self.image.crop((x+16*xside,y,x+16*xside+8,y+16)),(x,0))
 		return im.resize((size,size),PIL.Image.NEAREST)
 
-class ActuatorBlock:
+class ActuatorBlock(Block):
 	def __init__(self,offset=0):
 		self.base=PIL.Image.open(f'blocks/actuator_base.png').crop((0,0,32,32)).convert('RGBA')
 		self.head=PIL.Image.open(f'blocks/actuator_head.png').crop((0,0,32,32)).convert('RGBA')
