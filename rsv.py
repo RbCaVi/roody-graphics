@@ -8,25 +8,52 @@ assert struct.calcsize(chunklocationformat)==24
 chunkheaderformat="<I4s2q8I"
 tilegridheaderformat="<I4s2q20I"
 
+headermembers=[
+	"filesize","magic",
+	"regionX","regionY",
+	"loc_offset","loc_size",
+	"chunks_offset","chunks_size"
+]
+
+locmembers=[
+	'posX','posY','offset'
+]
+
+chunkheadermembers=[
+	'len','magic',
+	'posX','posY',
+	'gen_stage','last_rand_tick',
+	'grid_offset','grid_size',
+	'tiledata_offset','tiledata_size',
+	'entities_offset','entities_size'
+]
+
+tilegridheadermembers=[
+	'len','magic',
+	'boundX','boundY', # always 64
+	'A_offset','A_size',
+	'B_offset','B_size',
+	'C_offset','C_size',
+	'D_offset','D_size',
+	'E_offset','E_size', # the rest are ignored
+	'F_offset_spacer','F_size_spacer',
+	'G_offset_spacer','G_size_spacer',
+	'H_offset_spacer','H_size_spacer',
+	'I_offset_spacer','I_size_spacer',
+]
+
 def readsave(savedata):
 	version,=struct.unpack('<i',savedata[:4])
 	assert version==1
 
 	data=savedata[4:]
-	header=dict(zip([
-		"filesize","magic",
-		"regionX","regionY",
-		"loc_offset","loc_size",
-		"chunks_offset","chunks_size"
-	],struct.unpack(headerformat,data[:40])))
+	header=dict(zip(headermembers,struct.unpack(headerformat,data[:40])))
 
 	assert header['filesize']==len(data)
 	assert header['magic']==b'.rsv'
 
 	chunklocations=[
-		dict(zip([
-			'posX','posY','offset'
-		],loc)) for loc in
+		dict(zip(locmembers,loc)) for loc in
 		struct.iter_unpack(
 			chunklocationformat,
 			data[
@@ -39,15 +66,7 @@ def readsave(savedata):
 	assert len(chunklocations)==header['loc_size']/struct.calcsize(chunklocationformat)
 
 	chunkheaders=[
-		dict(zip(
-			[
-		    'len','magic',
-		    'posX','posY',
-		    'gen_stage','last_rand_tick',
-		    'grid_offset','grid_size',
-		    'tiledata_offset','tiledata_size',
-		    'entities_offset','entities_size'
-		  ],
+		dict(zip(chunkheadermembers,
 		  struct.unpack(
 		  	chunkheaderformat,
 			  data[
@@ -70,19 +89,7 @@ def readsave(savedata):
 
 	tilegridheaders=[
 		dict(zip(
-			[
-		    'len','magic',
-		    'boundX','boundY', # always 64
-		    'A_offset','A_size',
-		    'B_offset','B_size',
-		    'C_offset','C_size',
-		    'D_offset','D_size',
-		    'E_offset','E_size', # the rest are ignored
-		    'F_offset_spacer','F_size_spacer',
-		    'G_offset_spacer','G_size_spacer',
-		    'H_offset_spacer','H_size_spacer',
-		    'I_offset_spacer','I_size_spacer',
-		  ],
+			tilegridheadermembers,
 		  struct.unpack(
 		  	tilegridheaderformat,
 			  data[
