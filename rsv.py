@@ -2,10 +2,11 @@ import struct
 from rle import derle
 from smp import getsmpvalue
 
-headerformat="<IxxxxqqIIII"
-chunklocationformat="<qqIxxxx"
-chunkheaderformat="<IxxxxqqIIIIIIII"
-tilegridheaderformat="<IxxxxqqIIIIIIIIIIIIIIIIII"
+headerformat="<I4s2q4I"
+chunklocationformat="<2qIxxxx"
+assert struct.calcsize(chunklocationformat)==24
+chunkheaderformat="<I4s2q8I"
+tilegridheaderformat="<I4s2q20I"
 
 def readsave(savedata):
 	version,=struct.unpack('<i',savedata[:4])
@@ -13,13 +14,14 @@ def readsave(savedata):
 
 	data=savedata[4:]
 	header=dict(zip([
-		"filesize",
+		"filesize","magic",
 		"regionX","regionY",
 		"loc_offset","loc_size",
 		"chunks_offset","chunks_size"
 	],struct.unpack(headerformat,data[:40])))
 
 	assert header['filesize']==len(data)
+	assert header['magic']==b'.rsv'
 
 	chunklocations=[
 		dict(zip([
@@ -39,7 +41,7 @@ def readsave(savedata):
 	chunkheaders=[
 		dict(zip(
 			[
-		    'len',
+		    'len','magic',
 		    'posX','posY',
 		    'gen_stage','last_rand_tick',
 		    'grid_offset','grid_size',
@@ -61,10 +63,15 @@ def readsave(savedata):
 		for ch in chunkheaders
 	]) # all chunks have the same generation stage
 
+	assert all([
+		ch['magic']==b'chnk'
+		for ch in chunkheaders
+	]) # all chunks have the magic number
+
 	tilegridheaders=[
 		dict(zip(
 			[
-		    'len',
+		    'len','magic',
 		    'boundX','boundY', # always 64
 		    'A_offset','A_size',
 		    'B_offset','B_size',
@@ -85,6 +92,11 @@ def readsave(savedata):
 		  )
 	  )) for loc,ch in zip(chunklocations,chunkheaders)
 	]
+
+	assert all([
+		tgh['magic']==b'tile'
+		for tgh in tilegridheaders
+	]) # all tilegrids have the magic number
 
 	assert all([
 		tgh['boundX']==64
