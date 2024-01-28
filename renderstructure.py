@@ -1,8 +1,8 @@
-from smp import getsmpvalue
+from smp import _getsmpvalue
 from renderblocks import rendergrid
 
 def parsesmp(smpdata):
-    s,smp=getsmpvalue(smpdata)
+    s,smp=_getsmpvalue(smpdata)
     if len(s.strip())>0:
         raise Exception(f'probably not a valid smp: "{s}" was at the end')
     return smp
