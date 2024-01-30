@@ -2,6 +2,7 @@ import struct
 from rle import derle
 from smp import getsmpvalue
 
+versionformat="<i"
 headerformat="<I4s2q4I"
 chunklocationformat="<2qIxxxx"
 assert struct.calcsize(chunklocationformat)==24
@@ -42,8 +43,94 @@ tilegridheadermembers=[
 	'I_offset_spacer','I_size_spacer',
 ]
 
+def encode(save):
+  savedata=b''
+  assert save["version"]==1
+  savedata=struct.pack(versionformat,save["version"])
+  
+  tgdatas=[]
+  
+  for tgh,tg in zip(save['tilegridheaders'],save['tilegrids']):
+    assert tgh['boundX']==64
+    assert tgh['boundY']==64
+    assert len(tg['byteA'])==tgh['boundX']*tgh['boundY']
+    byteA=torle(tg['byteA'])
+    offsetA=struct.calcsize(tilegridheaderformat)
+    assert len(tg['byteB'])==tgh['boundX']*tgh['boundY']
+    byteB=torle(tg['byteB'])
+    offsetB=offsetA+len(byteA)
+    assert len(tg['byteC'])==tgh['boundX']*tgh['boundY']
+    byteC=torle(tg['byteC'])
+    offsetC=offsetB+len(byteB)
+    assert len(tg['byteD'])==tgh['boundX']*tgh['boundY']
+    byteD=torle(tg['byteD'])
+    offsetD=offsetC+len(byteC)
+    assert len(tg['byteE'])==tgh['boundX']*tgh['boundY']
+    byteE=torle(tg['byteE'])
+    offsetE=offsetD+len(byteD)
+    length=offsetE+len(byteE)
+    tgdata=struct.pack(
+      tilegridheaderformat,
+      length,'tile',
+      tgh['boundX'],tgh['boundX'],
+      offsetA,len(byteA),
+      offsetB,len(byteB),
+      offsetC,len(byteC),
+      offsetD,len(byteD),
+      offsetE,len(byteE),
+      0,0,0,0,0,0,0,0
+    )+byteA+byteB+byteC+byteD+byteE
+    tgdatas.append(tgdata)
+  
+  tddatas=[]
+  for td in save['tiledynamics']:
+    tddatas.append(bytes(smptostr(td),'utf-8'))
+  
+  esdatas=[]
+  for es in save['entities']:
+    tddatas.append(bytes(smptostr(es),'utf-8'))
+  
+  chdatas=[]
+  for ch,tgdata,tddata,esdata in zip(save['chunkheaders'],tgdatas,tddatas,esdatas):
+    gridoffset=struct.calcsize(chunkheaderformat)
+    dynoffset=gridoffset+len(tg)
+    entoffset=dynoffset+len(td)
+    length=entoffset+len(es)
+    chdata=struct.pack(
+      chunkheaderformat,
+      length,'chnk',
+      ch['posX'],ch['posY'],
+      ch['gen_stage'],ch['last_rand_tick'],
+      gridoffset,len(tg),
+      dynoffset,len(td),
+      entoffset,len(es),
+    )+tg+td+es
+    chdatas.append(chdata)
+  
+  *choffs,chsize=itertools.accumulate(map(len,chdatas),initial=0)
+  chdata=sum(chdatas)
+  locs=b''
+  for choff,loc in zip(choffs,save['chunklocations']):
+    locs+=struct.pack(
+      chunklocationformat,
+      loc['posX'],loc['posY'],
+      choff
+    )
+  
+  locoffset=struct.calcsize(headerformat)
+  choffset=locoffset+len(locs)
+  filesize=choffset+len(chdata)
+  header=save['header']
+  return struct.pack(
+    headerformat,
+    filesize,b'.rsv',
+    header["regionX"],header["regionY"],
+    locoffset,len(locs),
+    choffset,len(chdata)
+  )
+
 def readsave(savedata):
-	version,=struct.unpack('<i',savedata[:4])
+	version,=struct.unpack(versionformat,savedata[:4])
 	assert version==1
 
 	data=savedata[4:]
@@ -225,6 +312,7 @@ def readsave(savedata):
 	]
 
 	return {
+	  "version":version,
 		"header":header,
 		"chunklocations":chunklocations,
 		"chunkheaders":chunkheaders,
