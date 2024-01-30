@@ -46,7 +46,7 @@ tilegridheadermembers=[
 def encode(save):
   savedata=b''
   assert save["version"]==1
-  savedata=struct.pack(versionformat,save["version"])
+  version=struct.pack(versionformat,save["version"])
   
   tgdatas=[]
   
@@ -121,13 +121,13 @@ def encode(save):
   choffset=locoffset+len(locs)
   filesize=choffset+len(chdata)
   header=save['header']
-  return struct.pack(
+  return version+struct.pack(
     headerformat,
     filesize,b'.rsv',
     header["regionX"],header["regionY"],
     locoffset,len(locs),
     choffset,len(chdata)
-  )
+  )+locs+chdata
 
 def readsave(savedata):
 	version,=struct.unpack(versionformat,savedata[:4])
