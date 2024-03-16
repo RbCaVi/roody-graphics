@@ -152,13 +152,15 @@ def readsave(savedata):
 
 	assert len(chunklocations)==header['loc_size']/struct.calcsize(chunklocationformat)
 
+	chunkoffset=header['chunks_offset']+loc['offset']
+
 	chunkheaders=[
 		dict(zip(chunkheadermembers,
 		  struct.unpack(
 		  	chunkheaderformat,
 			  data[
-			  	header['chunks_offset']+loc['offset']:
-			  	header['chunks_offset']+loc['offset']+struct.calcsize(chunkheaderformat)
+			  	chunkoffset:
+			  	chunkoffset+struct.calcsize(chunkheaderformat)
 			  ]
 		  )
 	 	)) for loc in chunklocations
@@ -174,14 +176,16 @@ def readsave(savedata):
 		for ch in chunkheaders
 	]) # all chunks have the magic number
 
+	gridoffset=chunkoffset+ch['grid_offset']
+
 	tilegridheaders=[
 		dict(zip(
 			tilegridheadermembers,
 		  struct.unpack(
 		  	tilegridheaderformat,
 			  data[
-			  	header['chunks_offset']+loc['offset']+ch['grid_offset']:
-			  	header['chunks_offset']+loc['offset']+ch['grid_offset']+struct.calcsize(tilegridheaderformat)
+			  	gridoffset:
+			  	gridoffset+struct.calcsize(tilegridheaderformat)
 			  ]
 		  )
 	  )) for loc,ch in zip(chunklocations,chunkheaders)
@@ -195,119 +199,58 @@ def readsave(savedata):
 	assert all([
 		tgh['boundX']==64
 		for tgh in tilegridheaders
-	]) # all tilegrids have boundX equal to 64
+		for bound in ['boundX','boundY']
+	]) # all tilegrids have both bounds equal to 64
 
 	assert all([
-		tgh['boundY']==64
+		tgh[spacer]==0
 		for tgh in tilegridheaders
-	]) # all tilegrids have boundY equal to 64
+		for spacer in [
+			'F_offset_spacer',
+			'F_size_spacer',
+			'G_offset_spacer',
+			'G_size_spacer',
+			'H_offset_spacer',
+			'H_size_spacer',
+			'I_offset_spacer',
+			'I_size_spacer',
+		]
+	]) # all spacers are equal to 0
 
 	assert all([
-		tgh['F_offset_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have F_offset_spacer equal to 0
-
-	assert all([
-		tgh['F_size_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have F_size_spacer equal to 0
-
-	assert all([
-		tgh['G_offset_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have G_offset_spacer equal to 0
-
-	assert all([
-		tgh['G_size_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have G_size_spacer equal to 0
-
-	assert all([
-		tgh['H_offset_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have H_offset_spacer equal to 0
-
-	assert all([
-		tgh['H_size_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have H_size_spacer equal to 0
-
-	assert all([
-		tgh['I_offset_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have I_offset_spacer equal to 0
-
-	assert all([
-		tgh['I_size_spacer']==0
-		for tgh in tilegridheaders
-	]) # all tilegrids have I_size_spacer equal to 0
-
-	assert all([
-		header['chunks_offset']+ch['grid_offset']+tgh['A_offset']+tgh['A_size']<=header['filesize']
+		gridoffset+tgh[f'{c}_offset']+tgh[f'{c}_size']<=header['filesize']
 		for ch,tgh in zip(chunkheaders,tilegridheaders)
+		for c in 'ABCDE'
 	]) # all tilegrids have non-cut-off data
 
 	tilegrids=[
 		{
-		  'byteA':derle(data[
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['A_offset']:
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['A_offset']+tgh['A_size']
-		  ]),
-		  'byteB':derle(data[
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['B_offset']:
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['B_offset']+tgh['B_size']
-		  ]),
-		  'byteC':derle(data[
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['C_offset']:
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['C_offset']+tgh['C_size']
-		  ]),
-		  'byteD':derle(data[
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['D_offset']:
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['D_offset']+tgh['D_size']
-		  ]),
-		  'byteE':derle(data[
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['E_offset']:
-		  	header['chunks_offset']+loc['offset']+ch['grid_offset']+tgh['E_offset']+tgh['E_size']
-		  ])
+		  f'byte{c}':derle(data[
+		  	gridoffset+tgh[f'{c}_offset']:
+		  	gridoffset+tgh[f'{c}_offset']+tgh[f'{c}_size']
+		  ]) for c in 'ABCDE'
 	  } for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
-	assert all([
-		len(tg['byteA'])==tgh['boundX']*tgh['boundY']
-		for tgh,tg in zip(tilegridheaders,tilegrids)
-	]) # all tilegrids have full byteA grids
+	tgsize=tgh['boundX']*tgh['boundY']
 
 	assert all([
-		len(tg['byteB'])==tgh['boundX']*tgh['boundY']
+		len(tg[grid])==tgh['boundX']*tgh['boundY']
 		for tgh,tg in zip(tilegridheaders,tilegrids)
-	]) # all tilegrids have full byteB grids
-
-	assert all([
-		len(tg['byteC'])==tgh['boundX']*tgh['boundY']
-		for tgh,tg in zip(tilegridheaders,tilegrids)
-	]) # all tilegrids have full byteC grids
-
-	assert all([
-		len(tg['byteD'])==tgh['boundX']*tgh['boundY']
-		for tgh,tg in zip(tilegridheaders,tilegrids)
-	]) # all tilegrids have full byteD grids
-
-	assert all([
-		len(tg['byteE'])==tgh['boundX']*tgh['boundY']
-		for tgh,tg in zip(tilegridheaders,tilegrids)
-	]) # all tilegrids have full byteE grids
+		for grid in ['byteA','byteB','byteC','byteD','byteE']
+	]) # no partial grids
 
 	tiledynamics=[
 		getsmpvalue(data[
-	  	header['chunks_offset']+loc['offset']+ch['tiledata_offset']:
-	  	header['chunks_offset']+loc['offset']+ch['tiledata_offset']+ch['tiledata_size']
+	  	chunkoffset+ch['tiledata_offset']:
+	  	chunkoffset+ch['tiledata_offset']+ch['tiledata_size']
 	  ].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
 	entities=[
 		getsmpvalue(data[
-	  	header['chunks_offset']+loc['offset']+ch['entities_offset']:
-	  	header['chunks_offset']+loc['offset']+ch['entities_offset']+ch['entities_size']
+	  	chunkoffset+ch['entities_offset']:
+	  	chunkoffset+ch['entities_offset']+ch['entities_size']
 	  ].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
