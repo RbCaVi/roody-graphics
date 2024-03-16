@@ -19,13 +19,35 @@ def derle(data):
       raise Exception('end of rle marker')
   return out
 
-maxint=-(1<<31)-1 # the maximum value that can fit in a signed int32
+maxnint=(1<<31) # the maximum negative value that can fit in a signed int32
 maxbyte=(1<<7)-1 # the maximum value that can fit in a signed int8/byte
 
 def torle(data,addsep=False):
   out=b''
   uniqueseg={"count":0,"parts":[]}
   repeatseg={"count":0,"value":-1}
+  repeatbyte=None
+  repeatcount=0
+  uniquebytes=b''
+  if type(data)==str:
+    data=bytes(data,'utf-8')
+  for byte in data:
+    if byte==repeatbyte and repeatcount<maxint:
+      repeatcount+=1
+    else:
+      if repeatcount<=2:
+        for c in [repeatbyte]*repeatcount:
+          uniquebytes+=c
+          if len(uniquebytes)>maxnint:
+            out+=getintbytes(len(uniquebytes))
+            out+=uniquebytes
+            uniquebytes=b''
+      else:
+        out+=getintbytes(len(uniquebytes))
+        out+=uniquebytes
+        uniquebytes=b''
+        
+
   for c in data:
     if repeatseg["value"]==c and repeatseg["count"]<maxint:
       repeatseg["count"]+=1
