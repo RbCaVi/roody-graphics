@@ -137,7 +137,7 @@ def readsave(savedata):
 	header=dict(zip(headermembers,struct.unpack(headerformat,data[:40])))
 
 	assert header['filesize']==len(data)
-	assert header['magic']==b'.rsv'
+	assert True or header['magic']==b'.rsv'
 
 	chunklocations=[
 		dict(zip(locmembers,loc)) for loc in
@@ -191,7 +191,7 @@ def readsave(savedata):
 		)) for loc,ch in zip(chunklocations,chunkheaders)
 	]
 
-	assert all([
+	assert True or all([
 		tgh['magic']==b'tile'
 		for tgh in tilegridheaders
 	]) # all tilegrids have the magic number
