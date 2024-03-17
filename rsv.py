@@ -1,6 +1,7 @@
 import struct
-from rle import derle
-from smp import getsmpvalue
+from rle import derle,torle
+from smp import getsmpvalue,smptostr
+import itertools
 
 versionformat="<i"
 headerformat="<I4s2q4I"
@@ -53,11 +54,12 @@ def encode(save):
 	for tgh,tg in zip(save['tilegridheaders'],save['tilegrids']):
 		assert tgh['boundX']==64
 		assert tgh['boundY']==64
-		assert len(tg['byteA'])==tgh['boundX']*tgh['boundY']
-		assert len(tg['byteB'])==tgh['boundX']*tgh['boundY']
-		assert len(tg['byteC'])==tgh['boundX']*tgh['boundY']
-		assert len(tg['byteD'])==tgh['boundX']*tgh['boundY']
-		assert len(tg['byteE'])==tgh['boundX']*tgh['boundY']
+		tgsize=tgh['boundX']*tgh['boundY']
+		assert len(tg['byteA'])==tgsize
+		assert len(tg['byteB'])==tgsize
+		assert len(tg['byteC'])==tgsize
+		assert len(tg['byteD'])==tgsize
+		assert len(tg['byteE'])==tgsize
 		byteA=torle(tg['byteA'])
 		byteB=torle(tg['byteB'])
 		byteC=torle(tg['byteC'])
@@ -71,14 +73,14 @@ def encode(save):
 		length=offsetE+len(byteE)
 		tgdata=struct.pack(
 			tilegridheaderformat,
-			length,'tile',
+			length,b'tile',
 			tgh['boundX'],tgh['boundX'],
 			offsetA,len(byteA),
 			offsetB,len(byteB),
 			offsetC,len(byteC),
 			offsetD,len(byteD),
 			offsetE,len(byteE),
-			0,0,0,0,0,0,0,0
+			0,0,0,0,0,0,0,0,0,0
 		)+byteA+byteB+byteC+byteD+byteE
 		tgdatas.append(tgdata)
 	
@@ -88,27 +90,27 @@ def encode(save):
 	
 	esdatas=[]
 	for es in save['entities']:
-		tddatas.append(bytes(smptostr(es),'utf-8'))
+		esdatas.append(bytes(smptostr(es),'utf-8'))
 	
 	chdatas=[]
 	for ch,tgdata,tddata,esdata in zip(save['chunkheaders'],tgdatas,tddatas,esdatas):
 		gridoffset=struct.calcsize(chunkheaderformat)
-		dynoffset=gridoffset+len(tg)
-		entoffset=dynoffset+len(td)
-		length=entoffset+len(es)
+		dynoffset=gridoffset+len(tgdata)
+		entoffset=dynoffset+len(tddata)
+		length=entoffset+len(esdata)
 		chdata=struct.pack(
 			chunkheaderformat,
-			length,'chnk',
+			length,b'chnk',
 			ch['posX'],ch['posY'],
 			ch['gen_stage'],ch['last_rand_tick'],
-			gridoffset,len(tg),
-			dynoffset,len(td),
-			entoffset,len(es),
-		)+tg+td+es
+			gridoffset,len(tgdata),
+			dynoffset,len(tddata),
+			entoffset,len(esdata),
+		)+tgdata+tddata+esdata
 		chdatas.append(chdata)
 	
-	*choffs,chsize=itertools.accumulate(map(len,chdatas),initial=0)
-	chdata=sum(chdatas)
+	*choffs,chsize=itertools.accumulate(itertools.chain([0],map(len,chdatas)))
+	chdata=b''.join(chdatas)
 	locs=b''
 	for choff,loc in zip(choffs,save['chunklocations']):
 		locs+=struct.pack(
@@ -152,15 +154,15 @@ def readsave(savedata):
 
 	assert len(chunklocations)==header['loc_size']/struct.calcsize(chunklocationformat)
 
-	chunkoffset=header['chunks_offset']+loc['offset']
+	chunkoffset=lambda loc:header['chunks_offset']+loc['offset']
 
 	chunkheaders=[
 		dict(zip(chunkheadermembers,
 			struct.unpack(
 				chunkheaderformat,
 				data[
-					chunkoffset:
-					chunkoffset+struct.calcsize(chunkheaderformat)
+					chunkoffset(loc):
+					chunkoffset(loc)+struct.calcsize(chunkheaderformat)
 				]
 			)
 		)) for loc in chunklocations
@@ -176,7 +178,7 @@ def readsave(savedata):
 		for ch in chunkheaders
 	]) # all chunks have the magic number
 
-	gridoffset=chunkoffset+ch['grid_offset']
+	gridoffset=lambda loc,ch:chunkoffset(loc)+ch['grid_offset']
 
 	tilegridheaders=[
 		dict(zip(
@@ -184,8 +186,8 @@ def readsave(savedata):
 			struct.unpack(
 				tilegridheaderformat,
 				data[
-					gridoffset:
-					gridoffset+struct.calcsize(tilegridheaderformat)
+					gridoffset(loc,ch):
+					gridoffset(loc,ch)+struct.calcsize(tilegridheaderformat)
 				]
 			)
 		)) for loc,ch in zip(chunklocations,chunkheaders)
@@ -218,21 +220,19 @@ def readsave(savedata):
 	]) # all spacers are equal to 0
 
 	assert all([
-		gridoffset+tgh[f'{c}_offset']+tgh[f'{c}_size']<=header['filesize']
-		for ch,tgh in zip(chunkheaders,tilegridheaders)
+		gridoffset(loc,ch)+tgh[f'{c}_offset']+tgh[f'{c}_size']<=header['filesize']
+		for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 		for c in 'ABCDE'
 	]) # all tilegrids have non-cut-off data
 
 	tilegrids=[
 		{
 			f'byte{c}':derle(data[
-				gridoffset+tgh[f'{c}_offset']:
-				gridoffset+tgh[f'{c}_offset']+tgh[f'{c}_size']
+				gridoffset(loc,ch)+tgh[f'{c}_offset']:
+				gridoffset(loc,ch)+tgh[f'{c}_offset']+tgh[f'{c}_size']
 			]) for c in 'ABCDE'
 		} for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
-
-	tgsize=tgh['boundX']*tgh['boundY']
 
 	assert all([
 		len(tg[grid])==tgh['boundX']*tgh['boundY']
@@ -242,15 +242,15 @@ def readsave(savedata):
 
 	tiledynamics=[
 		getsmpvalue(data[
-			chunkoffset+ch['tiledata_offset']:
-			chunkoffset+ch['tiledata_offset']+ch['tiledata_size']
+			chunkoffset(loc)+ch['tiledata_offset']:
+			chunkoffset(loc)+ch['tiledata_offset']+ch['tiledata_size']
 		].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 
 	entities=[
 		getsmpvalue(data[
-			chunkoffset+ch['entities_offset']:
-			chunkoffset+ch['entities_offset']+ch['entities_size']
+			chunkoffset(loc)+ch['entities_offset']:
+			chunkoffset(loc)+ch['entities_offset']+ch['entities_size']
 		].decode('utf-8')) for loc,ch,tgh in zip(chunklocations,chunkheaders,tilegridheaders)
 	]
 

@@ -22,84 +22,56 @@ def derle(data):
 maxnint=(1<<31) # the maximum negative value that can fit in a signed int32
 maxbyte=(1<<7)-1 # the maximum value that can fit in a signed int8/byte
 
+def getintbytes(i):
+  try:
+    return struct.pack('<b',i)
+  except:
+    return struct.pack('<bi',0,i)
+
+def getuniqueseg(b):
+  if len(b)==0:
+    return b''
+  return getintbytes(len(b))+b
+
+def getrepeatseg(count,b):
+  if count==0:
+    return b''
+  return getintbytes(count)+bytes([b])
+
 def torle(data,addsep=False):
   out=b''
-  uniqueseg={"count":0,"parts":[]}
-  repeatseg={"count":0,"value":-1}
-  repeatbyte=None
+  repeatbyte=data[0]
   repeatcount=0
   uniquebytes=b''
   if type(data)==str:
     data=bytes(data,'utf-8')
   for byte in data:
-    if byte==repeatbyte and repeatcount<maxint:
+    if byte==repeatbyte and repeatcount<maxnint:
       repeatcount+=1
     else:
       if repeatcount<=2:
         for c in [repeatbyte]*repeatcount:
           uniquebytes+=c
-          if len(uniquebytes)>maxnint:
-            out+=getintbytes(len(uniquebytes))
-            out+=uniquebytes
+          if len(uniquebytes)>=maxnint:
+            print('WARNING: 2 GB OF UNIQUE DATA')
+            out+=getuniqueseg(uniquebytes)
             uniquebytes=b''
       else:
-        out+=getintbytes(len(uniquebytes))
-        out+=uniquebytes
+        out+=getuniqueseg(uniquebytes)
         uniquebytes=b''
-        
-
-  for c in data:
-    if repeatseg["value"]==c and repeatseg["count"]<maxint:
-      repeatseg["count"]+=1
-    else:
-      if repeatseg["count"]<3:
-        for _ in range(repeatseg["count"]):
-          uniqueseg["parts"].append(repeatseg["value"])
-          uniqueseg["count"]-=1
-          if -uniqueseg["count"]>maxint: # because people will definitely put 2gb of random data into this
-            #console.log('why would you put 2gb of unique data?',uniqueseg)
-            out+=getsegbytes(uniqueseg)
-            uniqueseg={"count":0,"parts":[]}
-        repeatseg={"count":1,"value":c}
-      else:
-        out+=getsegbytes(uniqueseg)
-        out+=getsegbytes(repeatseg)
-        uniqueseg={"count":0,"parts":[]}
-        repeatseg={"count":0,"value":c}
-      
-  if repeatseg["count"]<3:
-    for _ in range(repeatseg["count"]):
-      uniqueseg["parts"].append(repeatseg["value"])
-      uniqueseg["count"]-=1
-      if -uniqueseg["count"]>maxint: # because people will definitely put 2gb of random data into this
-        out+=getsegbytes(uniqueseg)
-        uniqueseg={"count":0,"parts":[]}
-    repeatseg={"count":0,"value":-1}
-  out+=getsegbytes(uniqueseg)
-  out+=getsegbytes(repeatseg)
+        out+=getrepeatseg(repeatcount,repeatbyte)
+        repeatbyte=None
+        repeatcount=0
+  if repeatcount<=2:
+    for c in [repeatbyte]*repeatcount:
+      uniquebytes+=c
+      if len(uniquebytes)>=maxnint:
+        print('WARNING: 2 GB OF UNIQUE DATA')
+        out+=getuniqueseg(uniquebytes)
+        uniquebytes=b''
+  out+=getuniqueseg(uniquebytes)
+  out+=getrepeatseg(repeatcount,repeatbyte)
   if addsep:
     # push stream end marker
     out+=b'\0\0\0\0\0'
   return out
-
-
-
-def getsegbytes(seg):
-  print(seg)
-  out=b''
-  count=seg["count"]
-  if count<0:
-    # unique
-    if -count>maxbyte:
-      out+=bytes([0,count>>24&255,count>>16&255,count>>8&255,count>>0&255])
-    else:
-      out+=bytes([count])
-    out+=bytes(seg["parts"])
-  elif count>0:
-    # repeat
-    if count>maxbyte:
-      out+=bytes([0,count>>24&255,count>>16&255,count>>8&255,count>>0&255])
-    else:
-      out+=bytes([count])
-    out+=bytes([seg["value"]])
-  return out # otherwise empty
