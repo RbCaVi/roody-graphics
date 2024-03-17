@@ -65,6 +65,9 @@ def encode(save):
 		byteC=torle(tg['byteC'])
 		byteD=torle(tg['byteD'])
 		byteE=torle(tg['byteE'])
+		#print('len',len(tg['byteA']),len(tg['byteB']),len(tg['byteC']),len(tg['byteD']),len(tg['byteE']))
+		#print('set',set(tg['byteA']),set(tg['byteB']),set(tg['byteC']),set(tg['byteD']),set(tg['byteE']))
+		#print('compress',byteA,byteB,byteC,byteD,byteE)
 		offsetA=struct.calcsize(tilegridheaderformat)
 		offsetB=offsetA+len(byteA)
 		offsetC=offsetB+len(byteB)
@@ -235,9 +238,14 @@ def readsave(savedata):
 	]
 
 	assert all([
-		len(tg[grid])==tgh['boundX']*tgh['boundY']
-		for tgh,tg in zip(tilegridheaders,tilegrids)
-		for grid in ['byteA','byteB','byteC','byteD','byteE']
+		len(tg[f'byte{c}'])==tgh['boundX']*tgh['boundY']# or
+		#print(f'{tgh},{len(tg[f"byte{c}"])},{f"byte{c}"}') or
+		#print(data[
+		#	gridoffset(loc,ch)+tgh[f'{c}_offset']:
+		#	gridoffset(loc,ch)+tgh[f'{c}_offset']+tgh[f'{c}_size']
+		#])
+		for tgh,tg,loc,ch in zip(tilegridheaders,tilegrids,chunklocations,chunkheaders)
+		for c in 'ABCDE'
 	]) # no partial grids
 
 	tiledynamics=[
