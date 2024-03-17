@@ -51,24 +51,28 @@ def torle(data,addsep=False):
     else:
       if repeatcount<=2:
         for c in [repeatbyte]*repeatcount:
-          uniquebytes+=c
+          uniquebytes+=bytes([c])
           if len(uniquebytes)>=maxnint:
             print('WARNING: 2 GB OF UNIQUE DATA')
             out+=getuniqueseg(uniquebytes)
             uniquebytes=b''
+        repeatbyte=byte
+        repeatcount=1
       else:
         out+=getuniqueseg(uniquebytes)
         uniquebytes=b''
         out+=getrepeatseg(repeatcount,repeatbyte)
-        repeatbyte=None
-        repeatcount=0
+        repeatbyte=byte
+        repeatcount=1
   if repeatcount<=2:
     for c in [repeatbyte]*repeatcount:
-      uniquebytes+=c
+      uniquebytes+=bytes([c])
       if len(uniquebytes)>=maxnint:
         print('WARNING: 2 GB OF UNIQUE DATA')
         out+=getuniqueseg(uniquebytes)
         uniquebytes=b''
+    repeatbyte=None
+    repeatcount=0
   out+=getuniqueseg(uniquebytes)
   out+=getrepeatseg(repeatcount,repeatbyte)
   if addsep:
