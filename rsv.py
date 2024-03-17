@@ -8,7 +8,7 @@ headerformat="<I4s2q4I"
 chunklocationformat="<2qIxxxx"
 assert struct.calcsize(chunklocationformat)==24
 chunkheaderformat="<I4s2q8I"
-tilegridheaderformat="<I4s2q20I"
+tilegridheaderformat="<I4s2q18I"
 
 headermembers=[
 	"filesize","magic",
@@ -83,7 +83,7 @@ def encode(save):
 			offsetC,len(byteC),
 			offsetD,len(byteD),
 			offsetE,len(byteE),
-			0,0,0,0,0,0,0,0,0,0
+			0,0,0,0,0,0,0,0
 		)+byteA+byteB+byteC+byteD+byteE
 		tgdatas.append(tgdata)
 	
