@@ -35,3 +35,11 @@ f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_te
 
 rsv2.writeall(f,chs)
 
+# rsv2.writeall(f,{(0,0):{
+#   'pos':(0,0),
+#   'genstage':150,
+#   'lastrandtick':0,
+#   'tiles':[[0]*4096]*5,
+#   'tiledyn':b'',
+#   'entity':b''
+# }})
