@@ -4,7 +4,9 @@ import os
 
 import struct
 
-import srle
+import rle
+import rle2
+rle.torle = rle2.compress
 import collections
 
 hf = '<I4s2qIIII'
