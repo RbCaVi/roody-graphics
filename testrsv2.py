@@ -12,7 +12,7 @@ def printblk(b):
 printblk(rsvedit.getblock(chs,0,0))
 b,*_ = rsvedit.getblock(chs,0,0)
 for i in range(50):
-  rsvedit.setblock(chs,i,0,[b,0,0,0,0])
+  rsvedit.setblock(chs,i,0,[3,0,0,0,0])
 
 for i in range(20,50):
   for j in range(20,50):
