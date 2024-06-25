@@ -6,7 +6,10 @@ f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_te
 
 chs = rsv2.readall(f)
 
-print(rsvedit.getblock(chs,0,0))
+def printblk(b):
+  print(b[0],bin(b[1] + 256)[3:],b[2],b[3],b[4])
+
+printblk(rsvedit.getblock(chs,0,0))
 b,*_ = rsvedit.getblock(chs,0,0)
 for i in range(50):
   rsvedit.setblock(chs,i,0,[b,0,0,0,0])
