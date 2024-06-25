@@ -53,7 +53,7 @@ def read(f):
     assert gh == 64
     toff = toffsz[::2]
     tsz = toffsz[1::2]
-    tdata = [srle.derle(gdata[off:off + sz]) for off,sz in zip(toff,tsz)]
+    tdata = [rle.derle(gdata[off:off + sz]) for off,sz in zip(toff,tsz)]
     for tg in tdata:
       assert len(tg) == 64 * 64
     #print('til',tdata)
@@ -109,7 +109,7 @@ def writeall(f,chs):
       szs = []
       thsz = struct.calcsize(gf)
       for t in fch['tiles']:
-        tr = srle.torle(t)
+        tr = rle.torle(t)
         offs.append(len(ts) + thsz)
         szs.append(len(tr))
         ts += tr
