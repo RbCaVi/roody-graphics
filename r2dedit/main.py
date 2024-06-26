@@ -1,5 +1,7 @@
+import pygame
+
 # displaying only belts
-class AppApp:
+class App:
     def __init__(self, width, height):
         # initialize variables
         self.clock = pygame.time.Clock()
@@ -28,6 +30,7 @@ class AppApp:
     
     def on_render(self):
         # fill the screen with black
+        self._display_surf.fill((0,0,0))
     
     def on_cleanup(self):
         # close the pygame window
@@ -51,6 +54,6 @@ class AppApp:
         self.on_cleanup()
 
 if __name__ == "__main__" :
-    theApp = AppApp()
+    theApp = App(300,300)
     # start theApp
     theApp.on_execute()
