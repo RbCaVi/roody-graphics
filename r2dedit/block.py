@@ -1,5 +1,4 @@
 import PIL.Image, PIL.ImageChops
-import logging
 import smp as smp
 import os
 from lang import cfgstr
@@ -10,7 +9,6 @@ import typing
 import numpy as np
 from assetload import blockinfos, assetinit
 
-l = logging.getLogger()
 assetinit()
 
 rimlights:dict[int, np.ndarray] = {}
@@ -274,7 +272,7 @@ for name,texture in data.items():
 	if 'rimlight' in texture:
 		rimlight = PIL.Image.open(os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[name]['rimlight'])).convert('RGB')
 		rimlight_array:np.ndarray = np.asarray(rimlight)[0]
-		l.debug(f'{name} has a rimlight wth shape {rimlight_array.shape}')
+		#print(f'{name} has a rimlight wth shape {rimlight_array.shape}')
 		rimlights[blockinfos[name]['id']] = rimlight_array
 
 @functools.cache
