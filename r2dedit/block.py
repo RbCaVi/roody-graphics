@@ -19,6 +19,19 @@ ImageKey = typing.NewType('ImageKey',str)
 
 imagecache: dict[ImageKey, PIL.Image.Image] = {}
 
+ImageArea: typing.TypeAlias = tuple[ImageKey, tuple[int,int], tuple[int,int]]
+
+def getimage(k: ImageKey) -> PIL.Image.Image:
+	return imagecache[k]
+
+def getimagearea(a: ImageArea) -> PIL.Image.Image:
+	k, (x, y), (w, h) = a
+	im = getimage(k)
+	return im.crop((x, y, x + w, y + h))
+
+def setimage(k: ImageKey, im: PIL.Image.Image) -> None:
+	imagecache[k] = im
+
 def clamp(a:np.ndarray) -> np.ndarray:
 	return np.fmin(np.fmax(a, 0.0), 1.0) # overflow error
 
@@ -58,7 +71,8 @@ def calc_highlights(lightdir:vec3, normal:np.ndarray, rimlight:np.ndarray) -> np
 
 fullbright_lightdir = (-0.5, 1.0, 1.0)
 
-def apply_normalmap(albedo:PIL.Image.Image, normal:PIL.Image.Image | None, rotation:int, block_id:int, flip:bool) -> PIL.Image.Image:
+@functools.cache
+def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int, block_id:int, flip:bool) -> PIL.Image.Image:
 	# rotate the light so when the block is rotated back the light is in the right direction
 	lightdir:vec3 = quarter_rotate(fullbright_lightdir, rotation);
 
@@ -66,10 +80,13 @@ def apply_normalmap(albedo:PIL.Image.Image, normal:PIL.Image.Image | None, rotat
 
 	normal_array:np.ndarray
 
-	if normal is None:
+	albedo = getimagearea(albedoa)
+
+	if normala is None:
 		s0,s1 = albedo.size
 		normal_array = np.full((s0,s1,3),(0.5,0.5,0.5))
 	else:
+		normal = getimagearea(normala)
 		normal_array = np.asarray(normal) / 255 * 2 - 1
 		normal_array = normal_array / np.atleast_3d(np.linalg.norm(normal_array, axis = 2))
 		normal_array = normal_array[:, :, :3]
@@ -118,8 +135,8 @@ WeldSideIn: typing.TypeAlias = WeldSide | bool
 WeldSidesIn: typing.TypeAlias = tuple[WeldSideIn,WeldSideIn,WeldSideIn,WeldSideIn]
 
 class ImageBit:
-	im:PIL.Image.Image
-	normal:PIL.Image.Image | None
+	im:ImageKey
+	normal:ImageKey | None
 	x:int
 	y:int
 	w:int
@@ -128,7 +145,7 @@ class ImageBit:
 	rotation:int
 	block_id:int
 
-	def __init__(self,im:tuple[PIL.Image.Image,PIL.Image.Image | None] | typing.Self,x:int=0,y:int=0,w:int=16,h:int=16,block_id:int | None = None) -> None:
+	def __init__(self,im:tuple[ImageKey,ImageKey | None] | typing.Self,x:int=0,y:int=0,w:int=16,h:int=16,block_id:int | None = None) -> None:
 		# the dimensions of the part of the image to use
 		self.x = x
 		self.y = y
@@ -155,13 +172,13 @@ class ImageBit:
 		self.rotation += r
 
 	def getim(self) -> PIL.Image.Image:
-		albedo = self.im.crop((self.x, self.y, self.x + self.w, self.y + self.h))
+		albedoa = self.im,(self.x, self.y), (self.w, self.h)
 		if self.normal is not None:
-			normal = self.normal.crop((self.x, self.y, self.x + self.w, self.y + self.h))
+			normala = self.normal,(self.x, self.y), (self.w, self.h)
 		else:
-			normal = None
+			normala = None
 
-		im = apply_normalmap(albedo, normal, self.rotation, self.block_id, self.flip)
+		im = apply_normalmap(albedoa, normala, self.rotation, self.block_id, self.flip)
 		# i have to calculate the diffuse and "rimlight"
 		# self.flip = flip_uv_x
 		# self.rotate = either rotation or (3 - rotation)
@@ -288,18 +305,22 @@ for name,texture in data.items():
 		rimlights[blockinfos[name]['id']] = rimlight_array
 
 @functools.cache
-def getblockims(block:str) -> tuple[PIL.Image.Image,PIL.Image.Image | None]:
+def getblockims(block:str) -> tuple[ImageKey, ImageKey | None]:
 	if 'normal' in blockpaths[block]:
 		try:
-			print(block,blockpaths[block])
-			normal = PIL.Image.open(os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal'])).convert('RGBA')
+			normalk = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal'])
+			normalim = PIL.Image.open(normalk).convert('RGBA')
+			setimage(normalk, normalim)
 		except FileNotFoundError:
-			normal = None
+			normalk = None
 	else:
-		normal = None
+		normalk = None
+	albedok = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo'])
+	albedoim = PIL.Image.open(albedok).convert('RGBA')
+	setimage(albedok, albedoim)
 	return (
-		PIL.Image.open(os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo'])).convert('RGBA'),
-		normal,
+		albedok,
+		normalk,
 	)
 
 def getblocksbyattr(attr:str) -> list[str]:
