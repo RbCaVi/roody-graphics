@@ -7,7 +7,8 @@
 
 from smp import getsmpvalue
 import json
-from typing import Any, TextIO
+from typing import Any, TextIO, Callable
+import decorator
 
 config = None
 
@@ -25,8 +26,10 @@ def cfgstr(target:str) -> str:
     assert isinstance(base,str)
     return base
 
-def opencfg(target:str, *args:Any, encoding:str|None="utf-8", **kwargs:Any) -> TextIO:
+def _opencfg(open:Callable, target:str, *args:Any, encoding:str|None="utf-8", **kwargs:Any) -> TextIO:
     return open(cfgstr(target), *args, encoding=encoding, **kwargs)
+
+opencfg = decorator.decorate(open,_opencfg)
 
 def cfg(target:str) -> int | str | list | dict:
     if config is None: loadconfig()
