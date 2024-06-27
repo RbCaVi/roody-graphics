@@ -1,6 +1,7 @@
 import struct
+import typing
 
-def derle(data):
+def derle(data: bytes) -> list[int]:
   out=[]
   while len(data)>0:
     n,=struct.unpack('<b',data[:1])
@@ -24,13 +25,18 @@ int32max =  2147483647
 int8min  = -128
 int8max  =  127
 
-def torle(raw):
+class Segment(typing.TypedDict):
+  count: int
+  similar: int
+  uniques: list[int]
+
+def torle(raw: bytes | list[int]) -> bytes:
   out = b""
   if len(raw) == 0:
     return out
 
-  segments = []
-  builder_segments = {"count":0,"similar":None,"uniques":[]}
+  segments: list[Segment] = []
+  builder_segments: Segment = {"count":0,"similar":-1,"uniques":[]}
   for r in raw:
     if r == builder_segments["similar"] and builder_segments["count"] < int32max:
       builder_segments["count"] += 1
@@ -43,8 +49,8 @@ def torle(raw):
   if builder_segments["count"] != 0:
     segments.append({**builder_segments})
 
-  uniqued_segments = []
-  builder_uniqued = {"count":0,"similar":None,"uniques":[]}
+  uniqued_segments: list[Segment] = []
+  builder_uniqued: Segment = {"count":0,"similar":-1,"uniques":[]}
   for s in segments:
     if s["count"] > 3:
       if builder_uniqued["count"] != 0:

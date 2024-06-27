@@ -7,19 +7,29 @@ import struct
 import rle
 import collections
 
+import typing
+
 hf = '<I4s2qIIII'
 lf = '<2qI4x'
 cf = '<I4s2qIiIIIIII'
 gf = '<I4s2q10I32x'
 
-def unpackh(fmt,data):
+def unpackh(fmt: str, data: bytes) -> tuple[typing.Any,...]:
   return struct.unpack(fmt,data[:struct.calcsize(fmt)])
 
-def unpacki(fmt,data):
+def unpacki(fmt: str, data: bytes) -> typing.Iterable[tuple[typing.Any,...]]:
   return struct.iter_unpack(fmt,data)
 
-def read(f):
-  with open(f,'rb') as f:
+class Chunk(typing.TypedDict):
+  pos: tuple[int,int]
+  genstage: int
+  lastrandtick: int
+  tiles: tuple[list[int],list[int],list[int],list[int],list[int]]
+  tiledyn: bytes
+  entity: bytes
+
+def read(fname: str) -> dict[tuple[int,int],Chunk]:
+  with open(fname,'rb') as f:
     data = f.read()
   
   version = struct.unpack('<i',data[:4])
@@ -36,7 +46,7 @@ def read(f):
   
   cdata = data[coff:coff + csz]
   
-  chs = {}
+  chs: dict[tuple[int,int],Chunk] = {}
   for loc in locs:
     lx,ly,ccoff = loc
     #print('dcpos',lx,ly,ccoff)
@@ -56,6 +66,8 @@ def read(f):
     tdata = [rle.derle(gdata[off:off + sz]) for off,sz in zip(toff,tsz)]
     for tg in tdata:
       assert len(tg) == 64 * 64
+    tdatat = tuple(tdata)
+    assert len(tdatat) == 5
     #print('til',tdata)
     ddata = ccdata[doff:doff + dsz]
     edata = ccdata[eoff:eoff + esz]
@@ -66,16 +78,16 @@ def read(f):
       'pos':(cx,cy),
       'genstage':gst,
       'lastrandtick':lrtk,
-      'tiles':tdata,
+      'tiles':tdatat,
       'tiledyn':ddata,
       'entity':edata
     }
   
   return chs
 
-def readall(f):
+def readall(savedir: str) -> dict[tuple[int,int],Chunk]:
   chs = {}
-  for f in glob.glob(os.path.join(f,'r*_*.rsv')):
+  for f in glob.glob(os.path.join(savedir,'r*_*.rsv')):
     #print(f)
     newchs = read(f)
     for cpos in newchs:
@@ -84,22 +96,27 @@ def readall(f):
   
   return chs
 
-def writeall(f,chs):
-  fs = collections.defaultdict(list)
+class ChunkP(typing.TypedDict):
+  pos: tuple[int,int]
+  lpos: tuple[int,int]
+  genstage: int
+  lastrandtick: int
+  tiles: tuple[list[int],list[int],list[int],list[int],list[int]]
+  tiledyn: bytes
+  entity: bytes
+
+def writeall(savedir: str, chs: dict[tuple[int,int],Chunk]) -> None:
+  fs: dict[tuple[int,int],dict[tuple[int,int],Chunk]] = collections.defaultdict(dict)
   
   for (cx,cy),ch in chs.items():
     fx,lx = divmod(cx, 32)
     fy,ly = divmod(cy, 32)
-    fs[(fx,fy)].append({
-      **ch,
-      'lpos':(lx,ly)
-    })
+    fs[(fx,fy)][(lx,ly)]=ch
   
   for (fx,fy),fchs in fs.items():
     ls = b''
     cs = b''
-    for fch in fchs:
-      lx,ly = fch['lpos']
+    for (lx,ly),fch in fchs.items():
       l = struct.pack(lf,lx,ly,len(cs))
       ls += l
       chsz = struct.calcsize(cf)
@@ -125,8 +142,8 @@ def writeall(f,chs):
       esz = len(fch['entity'])
       c += fch['entity']
       cx,cy = fch['pos']
-      ch = struct.pack(cf,len(c) + chsz,b'chnk',cx,cy,fch['genstage'],fch['lastrandtick'],toff,tsz,doff,dsz,eoff,esz)
-      cs += ch + c
+      chd = struct.pack(cf,len(c) + chsz,b'chnk',cx,cy,fch['genstage'],fch['lastrandtick'],toff,tsz,doff,dsz,eoff,esz)
+      cs += chd + c
     fhsz = struct.calcsize(hf)
     fdata = b''
     loff = len(fdata) + fhsz
@@ -137,6 +154,6 @@ def writeall(f,chs):
     fdata += cs
     fh = struct.pack(hf,len(fdata) + fhsz,b'.rsv',fx,fy,loff,lsz,coff,csz)
     fdata = struct.pack('<i',1) + fh + fdata
-    f2 = os.path.join(f,f'r{fx}_{fy}.rsv')
+    f2 = os.path.join(savedir,f'r{fx}_{fy}.rsv')
     with open(f2,'wb') as f3:
       f3.write(fdata)

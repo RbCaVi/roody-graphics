@@ -12,8 +12,6 @@ blockinfos:dict[str, dict[str, Any]] = collections.defaultdict(dict)
 
 locale:dict[tuple[str, ...], str] = {}
 
-entities = {}
-
 modifiers={
     '^':capitalize,
     's':plural,

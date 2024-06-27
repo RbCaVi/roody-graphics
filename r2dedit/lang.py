@@ -29,7 +29,7 @@ def cfgstr(target:str) -> str:
 def _opencfg(open:Callable, target:str, *args:Any, encoding:str|None="utf-8", **kwargs:Any) -> TextIO:
     return open(cfgstr(target), *args, encoding=encoding, **kwargs)
 
-opencfg = decorator.decorate(open,_opencfg,kwsyntax=True)
+opencfg = decorator.decorate(open,_opencfg,(),kwsyntax=True) # type: ignore[call-arg] # mypy doesn't know about kwsyntax
 
 def cfg(target:str) -> int | str | list | dict:
     if config is None: loadconfig()
