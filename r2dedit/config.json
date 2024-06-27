@@ -12,6 +12,5 @@
             "blockIDFile": "gameAssets/block_id_.smp",
             "blockDefsFile": "gameAssets/blockdefs.cc"
         }
-    },
-    "cacheFolder": "cache/",
+    }
 }
