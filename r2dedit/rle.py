@@ -19,63 +19,58 @@ def derle(data):
       raise Exception('end of rle marker')
   return out
 
-maxnint=(1<<31) # the maximum negative value that can fit in a signed int32
-maxbyte=(1<<7)-1 # the maximum value that can fit in a signed int8/byte
+int32min = -2147483648
+int32max =  2147483647
+int8min  = -128
+int8max  =  127
 
-def getintbytes(i):
-  try:
-    return struct.pack('<b',i)
-  except:
-    return struct.pack('<bi',0,i)
+def torle(raw):
+  out = b""
+  if len(raw) == 0:
+    return out
 
-def getuniqueseg(b):
-  if len(b)==0:
-    return b''
-  return getintbytes(len(b))+b
-
-def getrepeatseg(count,b):
-  if count==0:
-    return b''
-  return getintbytes(count)+bytes([b])
-
-def torle(data,addsep=False):
-  out=b''
-  repeatbyte=data[0]
-  repeatcount=0
-  uniquebytes=b''
-  if type(data)==str:
-    data=bytes(data,'utf-8')
-  for byte in data:
-    if byte==repeatbyte and repeatcount<maxnint:
-      repeatcount+=1
+  segments = []
+  builder_segments = {"count":0,"similar":None,"uniques":[]}
+  for r in raw:
+    if r == builder_segments["similar"] and builder_segments["count"] < int32max:
+      builder_segments["count"] += 1
     else:
-      if repeatcount<=2:
-        for c in [repeatbyte]*repeatcount:
-          uniquebytes+=bytes([c])
-          if len(uniquebytes)>=maxnint:
-            print('WARNING: 2 GB OF UNIQUE DATA')
-            out+=getuniqueseg(uniquebytes)
-            uniquebytes=b''
-        repeatbyte=byte
-        repeatcount=1
+      if builder_segments["count"] != 0:
+        segments.append({**builder_segments})
+      builder_segments["count"] = 1
+      builder_segments["similar"] = r
+      builder_segments["uniques"] = []
+  if builder_segments["count"] != 0:
+    segments.append({**builder_segments})
+
+  uniqued_segments = []
+  builder_uniqued = {"count":0,"similar":None,"uniques":[]}
+  for s in segments:
+    if s["count"] > 3:
+      if builder_uniqued["count"] != 0:
+        uniqued_segments.append({**builder_uniqued})
+        builder_uniqued["count"] = 0
+        builder_uniqued["uniques"] = []
+      uniqued_segments.append({**s})
+    else:
+      builder_uniqued["count"] -= s["count"]
+      builder_uniqued["uniques"].extend([s["similar"]] * s["count"])
+  if builder_uniqued["count"] != 0:
+    uniqued_segments.append({**builder_uniqued})
+
+  for s in uniqued_segments:
+    if s["count"] > 0:
+      if s["count"] >= int8max:
+        out += b"\0"
+        out += struct.pack('<i',s["count"])
       else:
-        out+=getuniqueseg(uniquebytes)
-        uniquebytes=b''
-        out+=getrepeatseg(repeatcount,repeatbyte)
-        repeatbyte=byte
-        repeatcount=1
-  if repeatcount<=2:
-    for c in [repeatbyte]*repeatcount:
-      uniquebytes+=bytes([c])
-      if len(uniquebytes)>=maxnint:
-        print('WARNING: 2 GB OF UNIQUE DATA')
-        out+=getuniqueseg(uniquebytes)
-        uniquebytes=b''
-    repeatbyte=None
-    repeatcount=0
-  out+=getuniqueseg(uniquebytes)
-  out+=getrepeatseg(repeatcount,repeatbyte)
-  if addsep:
-    # push stream end marker
-    out+=b'\0\0\0\0\0'
+        out += struct.pack('<b',s["count"])
+      out += bytes([s["similar"]])
+    else:
+      if s["count"] <= int8min:
+        out += b"\0"
+        out += struct.pack('<i',s["count"])
+      else:
+        out += struct.pack('<b',s["count"])
+      out += bytes(s["uniques"])
   return out
