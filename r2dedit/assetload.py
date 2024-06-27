@@ -122,7 +122,10 @@ def getlocale() -> None:
 def getentities() -> None:
     with opencfg("localGame.texture.entitiesFile", encoding="utf-8") as f:
         data=smp.getsmpvalue(f.read())
+    assert isinstance(data,dict)
     for name,entity in data.items():
+        assert isinstance(entity,dict)
+        assert isinstance(entity['texture'],str)
         entities[name]={'texture':entity['texture']}
 
 def assetinit() -> None:

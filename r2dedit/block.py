@@ -15,6 +15,10 @@ rimlights:dict[int, np.ndarray] = {}
 
 vec3:typing.TypeAlias = tuple[float, float, float]
 
+ImageKey = typing.NewType('ImageKey',str)
+
+imagecache: dict[ImageKey, PIL.Image.Image] = {}
+
 def clamp(a:np.ndarray) -> np.ndarray:
 	return np.fmin(np.fmax(a, 0.0), 1.0) # overflow error
 
@@ -226,6 +230,10 @@ class BlockDataLoose(typing.TypedDict):
 	offsety:typing.NotRequired[int]
 	overlayoffsetx:typing.NotRequired[int]
 	overlayoffsety:typing.NotRequired[int]
+	overlay2offsetx:typing.NotRequired[int]
+	overlay2offsety:typing.NotRequired[int]
+	overlay3offsetx:typing.NotRequired[int]
+	overlay4offsety:typing.NotRequired[int]
 	sizex:typing.NotRequired[int]
 	sizey:typing.NotRequired[int]
 
@@ -238,6 +246,10 @@ class BlockData(typing.TypedDict):
 	offsety:typing.NotRequired[int]
 	overlayoffsetx:typing.NotRequired[int]
 	overlayoffsety:typing.NotRequired[int]
+	overlay2offsetx:typing.NotRequired[int]
+	overlay2offsety:typing.NotRequired[int]
+	overlay3offsetx:typing.NotRequired[int]
+	overlay4offsety:typing.NotRequired[int]
 	sizex:typing.NotRequired[int]
 	sizey:typing.NotRequired[int]
 
@@ -691,7 +703,7 @@ def normalize(block:BlockDataIn) -> BlockData:
 	typ = typ.lower()
 	if typ == 'nic':
 		typ = 'air'
-	out = {
+	out: BlockData = {
 		"type":typ,
 		"rotate":rotate,
 		"weld":weld2,
