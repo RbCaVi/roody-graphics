@@ -722,11 +722,6 @@ def get(vss:list[list[BlockData]],xi:int,yi:int) -> BlockData:
 		return normalize("air");
 	return vs[xi]
 
-bottomtypes=['cap','flower_magenta','flower_yellow','grass','motor','pedestal','spikes'] # Only Bottom
-topbottomtypes=['actuator_head','wire_spool','telewall'] # Only Top / Bottom
-sidestypes=['combiner','extractor','injector','platform'] # no Top / Bottom
-notoptypes=['arc_furnace','beam_core','collector','creator','destroyer','dismantler','magnet','manipulator','mantler','teleportore','summonore']
-
 # can this block weld on this side?
 def canweld(side:str,block:BlockData) -> bool:
 	sides = blockinfos[block['type']]['weldablesides']
