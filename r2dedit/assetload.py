@@ -56,15 +56,6 @@ def getblockids() -> None:
         blockinfos[name]["id"] = int(i)
         idtoblock[int(i)] = name
 
-def geticoncoords() -> None:
-    with opencfg("localGame.texture.iconLocationFile") as f:
-        data=smp.getsmpvalue(f.read())
-    assert isinstance(data,dict)
-    for icon,xy in data.items():
-        assert isinstance(xy,str)
-        x,y=xy.split(',')
-        blockinfos[icon]["iconcoord"] = (int(x), int(y))
-
 def substitutelocale(localestr:str) -> str:
     # substitute locale entries into others
     # used in descriptions
@@ -119,18 +110,7 @@ def getlocale() -> None:
     for tkey,s in locale.items():
         locale[tkey]=substitutelocale(s)
 
-def getentities() -> None:
-    with opencfg("localGame.texture.entitiesFile", encoding="utf-8") as f:
-        data=smp.getsmpvalue(f.read())
-    assert isinstance(data,dict)
-    for name,entity in data.items():
-        assert isinstance(entity,dict)
-        assert isinstance(entity['texture'],str)
-        entities[name]={'texture':entity['texture']}
-
 def assetinit() -> None:
     getblockids()
     getblockdefs()
-    geticoncoords()
     getlocale()
-    getentities()
