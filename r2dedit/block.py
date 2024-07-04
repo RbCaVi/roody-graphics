@@ -306,16 +306,18 @@ for name,texture in data.items():
 
 @functools.cache
 def getblockims(block:str) -> tuple[ImageKey, ImageKey | None]:
+	albedok: ImageKey
+	normalk: ImageKey | None
 	if 'normal' in blockpaths[block]:
 		try:
-			normalk = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal'])
+			normalk = typing.cast(ImageKey,os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal']))
 			normalim = PIL.Image.open(normalk).convert('RGBA')
 			setimage(normalk, normalim)
 		except FileNotFoundError:
 			normalk = None
 	else:
 		normalk = None
-	albedok = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo'])
+	albedok = typing.cast(ImageKey,os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo']))
 	albedoim = PIL.Image.open(albedok).convert('RGBA')
 	setimage(albedok, albedoim)
 	return (
