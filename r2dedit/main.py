@@ -4,6 +4,8 @@ import block
 import rsv2
 import typing
 import assetload
+import rsvedit
+import math
 
 f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_templates/demo_world'
 
@@ -13,9 +15,6 @@ ch = chs[(0,-1)]
 
 # im = pygame.Surface((w,h))
 # im.blit(tiles,(x,y),(tx,ty,w,h))
-
-def convertim(im: PIL.Image.Image) -> pygame.Surface:
-    return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode))
 
 def spostowpos(spos, t):
     sx,sy = spos
@@ -71,7 +70,7 @@ class App:
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[2]:
                 dx,dy = event.rel
-                t = (t[0] + dx, t[1] + dy)
+                self.t = (self.t[0] + dx, self.t[1] + dy)
     
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -82,7 +81,7 @@ class App:
         assert self._display_surf is not None
         # fill the screen with black
         self._display_surf.fill((0, 0, 0))
-        sx,sy = spostowpos((0, 0), t)
+        sx,sy = spostowpos((0, 0), self.t)
         sxf,sxd = divmod(sx, 1)
         syf,syd = divmod(sy, 1)
         blocks = [
@@ -94,14 +93,14 @@ class App:
                         for n in [4,7,6,5]
                     ]
                 })
-                for x in range(sxf, sxf + ceil(self.width) + 1)
+                for x in range(sxf, sxf + math.ceil(self.width) + 1)
                 for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
             ]
-            for y in range(syf, syf + ceil(self.height) + 1)
+            for y in range(syf, syf + math.ceil(self.height) + 1)
         ]
-        im = block.makeimage(blocks,autoweld = False)
-        surf = convertim(im)
-        self._display_surf.blit(surf, (-sxd * 16, -syd * 16))
+        ims = block.makeimage(blocks,autoweld = False)
+        for im,x,y in ims:
+            self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
     
     def on_cleanup(self) -> None:
         # close the pygame window

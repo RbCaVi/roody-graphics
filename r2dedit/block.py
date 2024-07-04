@@ -8,6 +8,7 @@ import re
 import typing
 import numpy as np
 from assetload import blockinfos, assetinit
+import pygame
 
 assetinit()
 
@@ -20,6 +21,9 @@ ImageKey = typing.NewType('ImageKey',str)
 imagecache: dict[ImageKey, PIL.Image.Image] = {}
 
 ImageArea: typing.TypeAlias = tuple[ImageKey, tuple[int,int], tuple[int,int]]
+
+def convertim(im: PIL.Image.Image) -> pygame.Surface:
+    return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode))
 
 def getimage(k: ImageKey) -> PIL.Image.Image:
 	return imagecache[k]
@@ -72,7 +76,7 @@ def calc_highlights(lightdir:vec3, normal:np.ndarray, rimlight:np.ndarray) -> np
 fullbright_lightdir = (-0.5, 1.0, 1.0)
 
 @functools.cache
-def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int, block_id:int, flip:bool) -> PIL.Image.Image:
+def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int, block_id:int, flip:bool) -> pygame.Surface:
 	# rotate the light so when the block is rotated back the light is in the right direction
 	lightdir:vec3 = quarter_rotate(fullbright_lightdir, rotation);
 
@@ -119,7 +123,7 @@ def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int,
 			
 	out.putalpha(alpha)
 
-	return out
+	return convertim(out)
 
 #welded=top,left,bottom,right
 #rotate= 0    1    2      3
@@ -171,7 +175,7 @@ class ImageBit:
 			self.flip = not self.flip
 		self.rotation += r
 
-	def getim(self) -> PIL.Image.Image:
+	def getim(self) -> pygame.Surface:
 		albedoa = self.im,(self.x, self.y), (self.w, self.h)
 		if self.normal is not None:
 			normala = self.normal,(self.x, self.y), (self.w, self.h)
@@ -183,14 +187,14 @@ class ImageBit:
 		# self.flip = flip_uv_x
 		# self.rotate = either rotation or (3 - rotation)
 		if self.flip:
-			im = im.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+			im = pygame.transform.flip(im, True, False)
 		match self.rotation:
 			case 1:
-				im = im.transpose(PIL.Image.ROTATE_270)
+				im = pygame.transform.rotate(im,270)
 			case 2:
-				im = im.transpose(PIL.Image.ROTATE_180)
+				im = pygame.transform.rotate(im,180)
 			case 3:
-				im = im.transpose(PIL.Image.ROTATE_90)
+				im = pygame.transform.rotate(im,90)
 		return im
 
 class Image:
@@ -226,16 +230,16 @@ class Image:
 			my = max(my, y + h / 2)
 		return (int(mx),int(my))
 
-	def genimage(self,w:int | None=None,h:int | None=None) -> PIL.Image.Image:
+	def genimage(self,w:int | None=None,h:int | None=None) -> list[tuple[pygame.Surface,int,int]]:
 		defaultw, defaulth = self.getdims()
 		if w is None:
 			w = defaultw
 		if h is None:
 			h = defaulth
-		out=PIL.Image.new('RGBA',(w,h),(0,0,0,0))
+		out=[]
 		for (x, y), im in self.ims:
 			pim = im.getim()
-			out.alpha_composite(pim, (int(x - pim.width / 2), int(y - pim.height / 2)))
+			out.append((pim, int(x - pim.get_width() / 2), int(y - pim.get_height() / 2)))
 		return out
 
 class BlockDataLoose(typing.TypedDict):
@@ -756,7 +760,7 @@ def canweld(side:str,block:BlockData) -> bool:
 # blocks is a grid of blocks
 # autoweld makes it weld all possible unspecified welds
 # autoweld=False makes welds not autocorrect (for rendering roody structures)
-def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> PIL.Image.Image:
+def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[pygame.Surface,int,int]]:
 	xsize=max(map(len,blocks))
 	ysize=len(blocks)
 
