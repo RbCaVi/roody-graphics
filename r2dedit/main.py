@@ -56,7 +56,7 @@ class App:
                 yi = y // 16
                 i = xi + yi * 64
                 # clear the appropriate bit
-                ch['tiles'][1][i] = ch['tiles'][1][i] & (~ (1 << 4 | 1 << 5 | 1 << 6 | 1 << 7))
+                ch['tiles'][1][i] = ch['tiles'][1][i] & 0b00001111
     
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -67,9 +67,24 @@ class App:
         assert self._display_surf is not None
         # fill the screen with black
         self._display_surf.fill((0,0,0))
-        blocks = [typing.cast(block.BlockDataIn,{'type':assetload.idtoblock[a],'weld':[block.makeweldside((b >> n & 1) == 1) for n in [4,7,6,5]]}) for a,b in zip(ch['tiles'][0],ch['tiles'][1])]
-        blocks2 = [blocks[i * 64:(i + 1) * 64] for i in range(64)]
-        im = block.makeimage(blocks2,autoweld = False)
+        sx,sy = spostowpos((0, 0), t)
+        sxf = math.floor(sx)
+        syf = math.floor(sy)
+        blocks = [
+            [
+                typing.cast(block.BlockDataIn,{
+                    'type':assetload.idtoblock[a],
+                    'weld':[
+                        block.makeweldside((b >> n & 1) == 1)
+                        for n in [4,7,6,5]
+                    ]
+                })
+                for x in range(sxf, sxf + ceil(self.width) + 1)
+                for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
+            ]
+            for y in range(syf, syf + ceil(self.height) + 1)
+        ]
+        im = block.makeimage(blocks,autoweld = False)
         surf = convertim(im)
         self._display_surf.blit(surf,(0,0))
     
