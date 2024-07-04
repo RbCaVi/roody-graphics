@@ -3,6 +3,7 @@ import PIL
 import block
 import rsv2
 import typing
+import assetload
 
 f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_templates/demo_world'
 
