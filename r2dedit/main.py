@@ -11,8 +11,6 @@ f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_te
 
 chs = rsv2.readall(f)
 
-ch = chs[(0,-1)]
-
 # im = pygame.Surface((w,h))
 # im.blit(tiles,(x,y),(tx,ty,w,h))
 
