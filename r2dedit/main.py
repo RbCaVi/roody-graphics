@@ -17,6 +17,15 @@ ch = chs[(0,-1)]
 def convertim(im: PIL.Image.Image) -> pygame.Surface:
     return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode))
 
+def spostowpos(spos, t):
+    sx,sy = spos
+    tx,ty = t
+    x = sx - tx
+    y = sy - ty
+    x /= 16
+    y /= 16
+    return x, y
+
 class App:
     clock: pygame.time.Clock
     _running: bool
@@ -24,6 +33,7 @@ class App:
     size: tuple[int, int]
     width: int
     height: int
+    t: tuple[int, int]
 
     def __init__(self, width: int, height: int) -> None:
         # initialize variables
@@ -31,6 +41,7 @@ class App:
         self._running = True
         self._display_surf = None
         self.size = self.width, self.height = width, height
+        self.t = (0, 0)
  
     def on_init(self) -> bool:
         # start the pygame window
@@ -57,6 +68,10 @@ class App:
                 i = xi + yi * 64
                 # clear the appropriate bit
                 ch['tiles'][1][i] = ch['tiles'][1][i] & 0b00001111
+        if event.type == pygame.MOUSEMOTION:
+            if event.buttons[2]:
+                dx,dy = event.rel
+                t = (t[0] + dx, t[1] + dy)
     
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -66,10 +81,10 @@ class App:
     def on_render(self) -> None:
         assert self._display_surf is not None
         # fill the screen with black
-        self._display_surf.fill((0,0,0))
+        self._display_surf.fill((0, 0, 0))
         sx,sy = spostowpos((0, 0), t)
-        sxf = math.floor(sx)
-        syf = math.floor(sy)
+        sxf,sxd = divmod(sx, 1)
+        syf,syd = divmod(sy, 1)
         blocks = [
             [
                 typing.cast(block.BlockDataIn,{
@@ -86,7 +101,7 @@ class App:
         ]
         im = block.makeimage(blocks,autoweld = False)
         surf = convertim(im)
-        self._display_surf.blit(surf,(0,0))
+        self._display_surf.blit(surf, (-sxd * 16, -syd * 16))
     
     def on_cleanup(self) -> None:
         # close the pygame window
