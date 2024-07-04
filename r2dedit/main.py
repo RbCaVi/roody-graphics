@@ -61,14 +61,14 @@ class App:
             # 4 scroll up
             # 5 scroll down
             if event.button == 1 or event.button == 3:
-                x,y = event.pos
-                xi = x // 16
-                yi = y // 16
-                i = xi + yi * 64
-                # clear the appropriate bit
-                ch['tiles'][1][i] = ch['tiles'][1][i] & 0b00001111
+                x,y = spostowpos(event.pos, self.t)
+                x = math.floor(x)
+                y = math.floor(y)
+                a,b,c,d,e = rsvedit.getblock(chs, x, y)
+                b = b & 0b00001111
+                rsvedit.setblock(chs, x, y, (a,b,c,d,e))
         if event.type == pygame.MOUSEMOTION:
-            if event.buttons[2]:
+            if event.buttons[1]:
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
     
