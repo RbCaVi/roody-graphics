@@ -9,6 +9,8 @@ import math
 
 f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_templates/demo_world'
 
+f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_templates/wires'
+
 chs = rsv2.readall(f)
 
 # im = pygame.Surface((w,h))
