@@ -44,6 +44,19 @@ class App:
         if event.type == pygame.QUIT:
             # close the window when the x is clicked
             self._running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # 1 left
+            # 2 middle
+            # 3 right
+            # 4 scroll up
+            # 5 scroll down
+            if event.button == 1 or event.button == 3:
+                x,y = event.pos
+                xi = x // 16
+                yi = y // 16
+                i = xi + yi * 64
+                # clear the appropriate bit
+                ch['tiles'][1][i] = ch['tiles'][1][i] & (~ (1 << 4 | 1 << 5 | 1 << 6 | 1 << 7))
     
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
