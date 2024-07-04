@@ -54,6 +54,11 @@ class App:
         assert self._display_surf is not None
         # fill the screen with black
         self._display_surf.fill((0,0,0))
+        blocks = [typing.cast(block.BlockDataIn,{'type':assetload.idtoblock[a],'weld':[block.makeweldside((b >> n & 1) == 1) for n in [4,7,6,5]]}) for a,b in zip(ch['tiles'][0],ch['tiles'][1])]
+        blocks2 = [blocks[i * 64:(i + 1) * 64] for i in range(64)]
+        im = block.makeimage(blocks2,autoweld = False)
+        surf = convertim(im)
+        self._display_surf.blit(surf,(0,0))
     
     def on_cleanup(self) -> None:
         # close the pygame window
@@ -77,6 +82,6 @@ class App:
         self.on_cleanup()
 
 if __name__ == "__main__" :
-    theApp = App(300,300)
+    theApp = App(16 * 64,16 * 64)
     # start theApp
     theApp.on_execute()
