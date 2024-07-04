@@ -62,11 +62,39 @@ class App:
             # 5 scroll down
             if event.button == 1 or event.button == 3:
                 x,y = spostowpos(event.pos, self.t)
-                x = math.floor(x)
-                y = math.floor(y)
+                x,xf = divmod(x, 1)
+                y,xf = divmod(y, 1)
+                xf -= 0.5
+                yf -= 0.5
+                dxy = [
+                    ( 0, -1),
+                    ( 1,  0),
+                    ( 0,  1),
+                    (-1,  0),
+                ]
+                if abs(xf) > abs(yf):
+                    if xf > 0:
+                        side = 1
+                    else:
+                        side = 3
+                else:
+                    if yf > 0:
+                        side = 2
+                    else:
+                        side = 0
                 a,b,c,d,e = rsvedit.getblock(chs, x, y)
-                b = b & 0b00001111
+                mask = 1 << (side + 4)
+                b = b & ~mask
+                if event.button == 1:
+                    b = b | mask
                 rsvedit.setblock(chs, x, y, (a,b,c,d,e))
+                side2 = (side + 2) % 4
+                a,b,c,d,e = rsvedit.getblock(chs, x+dxy[side][0], y+dxy[side][1])
+                mask = 1 << (side2 + 4)
+                b = b & ~mask
+                if event.button == 1:
+                    b = b | mask
+                rsvedit.setblock(chs, x+dxy[side][0], y+dxy[side][1], (a,b,c,d,e))
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]:
                 dx,dy = event.rel
