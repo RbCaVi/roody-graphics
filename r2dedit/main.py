@@ -93,10 +93,10 @@ class App:
                         for n in [4,7,6,5]
                     ]
                 })
-                for x in range(sxf, sxf + math.ceil(self.width) + 1)
+                for x in range(int(sxf), int(sxf + math.ceil(self.width / 16) + 1))
                 for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
             ]
-            for y in range(syf, syf + math.ceil(self.height) + 1)
+            for y in range(int(syf), int(syf + math.ceil(self.height / 16) + 1))
         ]
         ims = block.makeimage(blocks,autoweld = False)
         for im,x,y in ims:
