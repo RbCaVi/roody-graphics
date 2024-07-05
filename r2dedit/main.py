@@ -16,7 +16,7 @@ chs = rsv2.readall(f)
 # im = pygame.Surface((w,h))
 # im.blit(tiles,(x,y),(tx,ty,w,h))
 
-def spostowpos(spos, t):
+def spostowpos(spos: tuple[float,float], t: tuple[float,float]) -> tuple[float,float]:
     sx,sy = spos
     tx,ty = t
     x = sx - tx
@@ -24,6 +24,11 @@ def spostowpos(spos, t):
     x /= 16
     y /= 16
     return x, y
+
+def intfrac(x: float) -> tuple[int,float]:
+    i,f = divmod(x, 1)
+    assert i == int(i)
+    return int(i), f
 
 class App:
     clock: pygame.time.Clock
@@ -62,8 +67,8 @@ class App:
             # 5 scroll down
             if event.button == 1 or event.button == 3:
                 x,y = spostowpos(event.pos, self.t)
-                x,xf = divmod(x, 1)
-                y,xf = divmod(y, 1)
+                xi,xf = intfrac(x)
+                yi,yf = intfrac(y)
                 xf -= 0.5
                 yf -= 0.5
                 dxy = [
@@ -82,19 +87,19 @@ class App:
                         side = 2
                     else:
                         side = 0
-                a,b,c,d,e = rsvedit.getblock(chs, x, y)
+                a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
                 mask = 1 << (side + 4)
                 b = b & ~mask
                 if event.button == 1:
                     b = b | mask
-                rsvedit.setblock(chs, x, y, (a,b,c,d,e))
+                rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
                 side2 = (side + 2) % 4
-                a,b,c,d,e = rsvedit.getblock(chs, x+dxy[side][0], y+dxy[side][1])
+                a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
                 mask = 1 << (side2 + 4)
                 b = b & ~mask
                 if event.button == 1:
                     b = b | mask
-                rsvedit.setblock(chs, x+dxy[side][0], y+dxy[side][1], (a,b,c,d,e))
+                rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]:
                 dx,dy = event.rel
@@ -110,8 +115,8 @@ class App:
         # fill the screen with black
         self._display_surf.fill((0, 0, 0))
         sx,sy = spostowpos((0, 0), self.t)
-        sxf,sxd = divmod(sx, 1)
-        syf,syd = divmod(sy, 1)
+        sxf,sxd = intfrac(sx)
+        syf,syd = intfrac(sy)
         blocks = [
             [
                 typing.cast(block.BlockDataIn,{
@@ -121,10 +126,10 @@ class App:
                         for n in [4,7,6,5]
                     ]
                 })
-                for x in range(int(sxf), int(sxf + math.ceil(self.width / 16) + 1))
+                for x in range(sxf, sxf + math.ceil(self.width / 16) + 1)
                 for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
             ]
-            for y in range(int(syf), int(syf + math.ceil(self.height / 16) + 1))
+            for y in range(syf, syf + math.ceil(self.height / 16) + 1)
         ]
         ims = block.makeimage(blocks,autoweld = False)
         for im,x,y in ims:
