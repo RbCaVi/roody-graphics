@@ -104,7 +104,10 @@ class App:
             if event.buttons[1]:
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
-    
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_s:
+                rsv2.writeall(f, chs)
+
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
         # don't set this too fast, or the framerate won't be the same all the time
@@ -113,7 +116,7 @@ class App:
     def on_render(self) -> None:
         assert self._display_surf is not None
         # fill the screen with black
-        self._display_surf.fill((0, 0, 0))
+        self._display_surf.fill((200, 200, 255))
         sx,sy = spostowpos((0, 0), self.t)
         sxf,sxd = intfrac(sx)
         syf,syd = intfrac(sy)
