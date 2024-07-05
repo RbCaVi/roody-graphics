@@ -601,6 +601,13 @@ def wirecomponent(data:BlockData) -> BlockData:
 			if bdata is None:
 				raise ValueError('bad value format')
 			data['overlayoffsetx']=16*(2*(int(bdata['delay'])-1)+(bdata['state']=='on'))
+		elif typ=="counter":
+			# delay, in, out
+			raise ValueError('counter data not supported')
+			bdata=re.fullmatch('(?P<delay>[1-7])(?P<instate>on|off)?(?P<state>on|off)',data['data'])
+			if bdata is None:
+				raise ValueError('bad value format')
+			data['overlayoffsetx']=16*(2*(int(bdata['delay'])-1)+(bdata['state']=='on'))
 	return data
 
 def counterfilter(data:BlockData) -> BlockData:
@@ -650,8 +657,8 @@ for t in wiretypes:
 blocktypes['potentiometer']['layers'].append(overlay2)
 blocktypes['sensor']['layers'].append(overlay2)
 
-blocktypes['counter']['datafilters'].append(counterfilter)
-blocktypes['counter']['layers']=[wafer,wire,counter]
+#blocktypes['counter']['datafilters'].append(counterfilter)
+#blocktypes['counter']['layers']=[wafer,wire,counter]
 
 blocktypes['wire_board']['layers']=[wafer,wire]
 blocktypes['wire']['layers']=[frame,wire]
