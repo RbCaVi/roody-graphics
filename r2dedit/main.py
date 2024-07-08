@@ -65,45 +65,56 @@ class App:
             # 3 right
             # 4 scroll up
             # 5 scroll down
-            if event.button == 1 or event.button == 3:
+            if tool == 'weld':
+                if event.button == 1 or event.button == 3:
+                    x,y = spostowpos(event.pos, self.t)
+                    xi,xf = intfrac(x)
+                    yi,yf = intfrac(y)
+                    xf -= 0.5
+                    yf -= 0.5
+                    dxy = [
+                        ( 0, -1),
+                        ( 1,  0),
+                        ( 0,  1),
+                        (-1,  0),
+                    ]
+                    if abs(xf) > abs(yf):
+                        if xf > 0:
+                            side = 1
+                        else:
+                            side = 3
+                    else:
+                        if yf > 0:
+                            side = 2
+                        else:
+                            side = 0
+                    a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
+                    mask = 1 << (side + 4)
+                    b = b & ~mask
+                    if event.button == 1:
+                        b = b | mask
+                    rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
+                    side2 = (side + 2) % 4
+                    a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
+                    mask = 1 << (side2 + 4)
+                    b = b & ~mask
+                    if event.button == 1:
+                        b = b | mask
+                    rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
+            elif tool == 'select':
                 x,y = spostowpos(event.pos, self.t)
-                xi,xf = intfrac(x)
-                yi,yf = intfrac(y)
-                xf -= 0.5
-                yf -= 0.5
-                dxy = [
-                    ( 0, -1),
-                    ( 1,  0),
-                    ( 0,  1),
-                    (-1,  0),
-                ]
-                if abs(xf) > abs(yf):
-                    if xf > 0:
-                        side = 1
-                    else:
-                        side = 3
-                else:
-                    if yf > 0:
-                        side = 2
-                    else:
-                        side = 0
-                a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
-                mask = 1 << (side + 4)
-                b = b & ~mask
-                if event.button == 1:
-                    b = b | mask
-                rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
-                side2 = (side + 2) % 4
-                a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
-                mask = 1 << (side2 + 4)
-                b = b & ~mask
-                if event.button == 1:
-                    b = b | mask
-                rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
+                x = math.floor(x)
+                y = math.floor(y)
+                srect = (x, y, x, y)
         if event.type == pygame.MOUSEMOTION:
-            if event.buttons[1]:
+            if event.buttons[1]: # middle mouse
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
+            if tool == 'select':
+                x,y = spostowpos(event.pos, self.t)
+                x = math.floor(x)
+                y = math.floor(y)
+                srect = (min(srect[0], x), min(srect[1], y), max(srect[2], x), max(srect[3], y))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s:
                 rsv2.writeall(f, chs)
