@@ -6,6 +6,7 @@ import typing
 import assetload
 import rsvedit
 import math
+import time
 
 f = '/home/rvail/Desktop/games/Roody2d demo - spark/Roody2d Demo/content/save_templates/demo_world'
 
@@ -15,6 +16,23 @@ chs = rsv2.readall(f)
 
 # im = pygame.Surface((w,h))
 # im.blit(tiles,(x,y),(tx,ty,w,h))
+
+class Timer:
+    #start
+
+    def __init__(self, s):
+        self.s = s
+
+    def __enter__(self):
+        self.start = time.time()
+        print(f'{self.s}: start at {self.start}')
+
+    def __exit__(self, exc_type, exc, exc_tb):
+        if exc is not None:
+            return False
+        t = time.time()
+        print(f'{self.s}: ended at {t}')
+        print(f'{self.s}: {t - self.start} seconds')
 
 def spostowpos(spos: tuple[float,float], t: tuple[float,float]) -> tuple[float,float]:
     sx,sy = spos
