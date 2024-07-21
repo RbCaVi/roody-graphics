@@ -90,9 +90,9 @@ class App:
                             side = 0
                     a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
                     mask = 1 << (side + 4)
-                    b = b & ~mask
-                    if event.button == 1:
-                        b = b | mask
+                    b = b & ~mask # clear the weld bit
+                    if event.button == 1: # if left mouse (weld)
+                        b = b | mask # set the weld bit
                     rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
                     side2 = (side + 2) % 4
                     a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
@@ -102,35 +102,44 @@ class App:
                         b = b | mask
                     rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
             elif tool == 'select':
-                x,y = spostowpos(event.pos, self.t)
-                x = math.floor(x)
-                y = math.floor(y)
-                srect = (x, y, x, y)
+                if event.button == 1: # select is only left mouse
+                    x,y = spostowpos(event.pos, self.t)
+                    x = math.floor(x)
+                    y = math.floor(y)
+                    srect = (x, y, x, y)
             elif tool.startswith('paste-') and event.button in [1, 3]:
-                if event.button == 1:
-                    paste()
-                tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool]
+                if event.button == 1: # left click to paste
+                    x,y = spostowpos(event.pos, self.t)
+                    x = math.floor(x)
+                    y = math.floor(y)
+                    setarea(chs, clipboard, x, y) # paste the clipboard to the world
+                tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool] # go back to the original tool
         if event.type == pygame.MOUSEMOTION:
-            if event.buttons[1]: # middle mouse
+            if event.buttons[1]: # middle mouse drag to move
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
             if tool == 'select':
-                x,y = spostowpos(event.pos, self.t)
-                x = math.floor(x)
-                y = math.floor(y)
-                srect = (min(srect[0], x), min(srect[1], y), max(srect[2], x), max(srect[3], y))
+                if event.buttons[0]: # left mouse to select
+                    x,y = spostowpos(event.pos, self.t)
+                    x = math.floor(x)
+                    y = math.floor(y)
+                    srect = (min(srect[0], x), min(srect[1], y), max(srect[2], x), max(srect[3], y))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s: # save
                 rsv2.writeall(f, chs)
-            if event.key == pygame.K_v:
-                if tool in ['select', 'weld']:
-                    tool = {'select': 'paste-s', 'weld': 'paste-w'}[tool]
+            if event.key == pygame.K_v: # v
+                if event.mod & pygame.KMOD_CTRL: # + ctrl
+                    if tool in ['select', 'weld']:
+                        tool = {'select': 'paste-s', 'weld': 'paste-w'}[tool] # go to paste mode
             if tool == 'weld':
-                if event.key == pygame.K_w:
+                if event.key == pygame.K_w: # w toggles weld/select
                     tool = 'select'
             if tool == 'select':
                 if event.key == pygame.K_w:
                     tool = 'weld'
+                if event.key == pygame.K_c: # copy selected area
+                    if event.mod & pygame.KMOD_CTRL:
+                        clipboard = getarea(chs, srect)
 
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -161,6 +170,11 @@ class App:
         ims = block.makeimage(blocks,autoweld = False)
         for im,x,y in ims:
             self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
+
+        if tool.startswith('paste-'):
+            blocks = makeblockdata(clipboard)
+            # halve the alpha too
+            ...
     
     def on_cleanup(self) -> None:
         # close the pygame window
