@@ -9,6 +9,25 @@ import typing
 import numpy as np
 from assetload import blockinfos, assetinit
 import pygame
+import frozendict
+import time
+
+class Timer:
+    #start
+
+    def __init__(self, s):
+        self.s = s
+
+    def __enter__(self):
+        self.start = time.time()
+        print(f'{self.s}: start at {self.start}')
+
+    def __exit__(self, exc_type, exc, exc_tb):
+        if exc is not None:
+            return False
+        t = time.time()
+        print(f'{self.s}: ended at {t}')
+        print(f'{self.s}: {t - self.start} seconds')
 
 assetinit()
 
@@ -34,6 +53,7 @@ def getimagearea(a: ImageArea) -> PIL.Image.Image:
 	return im.crop((x, y, x + w, y + h))
 
 def setimage(k: ImageKey, im: PIL.Image.Image) -> None:
+	print('setting imagecache for',k)
 	imagecache[k] = im
 
 def clamp(a:np.ndarray) -> np.ndarray:
@@ -763,6 +783,20 @@ def canweld(side:str,block:BlockData) -> bool:
 	i=i%4
 	return sides[i] and iswelded(block['weld'][{'top':0,'bottom':2,'left':1,'right':3}[side]])
 
+@functools.cache
+def getblockimage(block: BlockData) -> Image:
+	blocktype=blocktypes[block['type']]
+	im=Image()
+	for datafilter in blocktype['datafilters']:
+		block=datafilter(block)
+	layers: list[Image] = []
+	for layer in blocktype['layers']:
+		im.addimage(layer(block),0,0) # paste the block
+	return im
+
+def freezeweld(weld):
+	return frozendict.frozendict(weld)
+
 # the main method
 # blocks is a grid of blocks
 # autoweld makes it weld all possible unspecified welds
@@ -780,48 +814,52 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 	im=Image()
 	for xi in range(xsize):
 		for yi in range(ysize):
-			block=get(newblocks,xi,yi)
-			if block['type']=='air':
-				continue
-			if autoweld:
-				weldright=canweld('right',block) and canweld('left',get(newblocks,xi+1,yi))
-				weldleft=canweld('left',block) and canweld('right',get(newblocks,xi-1,yi))
-				weldbottom=canweld('bottom',block) and canweld('top',get(newblocks,xi,yi+1))
-				weldtop=canweld('top',block) and canweld('bottom',get(newblocks,xi,yi-1))
-				block['weld']=(
-					makeweldside(block['weld'][0] and weldtop),
-					makeweldside(block['weld'][1] and weldleft),
-					makeweldside(block['weld'][2] and weldbottom),
-					makeweldside(block['weld'][3] and weldright),
-				)
-			if block['type']=='platform': # special case
-				# check if sides are platform
-				block['weld']=(
-					block['weld'][0],
-					setplatformside(block['weld'][1],get(newblocks,xi-1,yi)['type']!='platform'),
-					block['weld'][2],
-					setplatformside(block['weld'][3],get(newblocks,xi+1,yi)['type']!='platform'),
-				)
-			if block['type'] in frametypes: # special case
-				# check if sides are frame base
-				block['weld']=(
-					setframeside(block['weld'][0],get(newblocks,xi,yi-1)['type'] in frametypes),
-					setframeside(block['weld'][1],get(newblocks,xi-1,yi)['type'] in frametypes),
-					setframeside(block['weld'][2],get(newblocks,xi,yi+1)['type'] in frametypes),
-					setframeside(block['weld'][3],get(newblocks,xi+1,yi)['type'] in frametypes),
-				)
-			blocktype=blocktypes[block['type']]
-			if blocktype['wired']:
-				# check if sides are wired
-				block['weld']=(
-					setwireside(block['weld'][0],get(newblocks,xi,yi-1)['type'] in wiredtypes),
-					setwireside(block['weld'][1],get(newblocks,xi-1,yi)['type'] in wiredtypes),
-					setwireside(block['weld'][2],get(newblocks,xi,yi+1)['type'] in wiredtypes),
-					setwireside(block['weld'][3],get(newblocks,xi+1,yi)['type'] in wiredtypes),
-				)
-			for datafilter in blocktype['datafilters']:
-				block=datafilter(block)
-			for layer in blocktype['layers']:
-				bim = layer(block)
-				im.addimage(bim,xi*16,yi*16) # paste the block
+			with Timer(0):
+				block=get(newblocks,xi,yi)
+				if block['type']=='air':
+					continue
+				blockweld = tuple(block['weld'])
+				if autoweld:
+					weldright=canweld('right',block) and canweld('left',get(newblocks,xi+1,yi))
+					weldleft=canweld('left',block) and canweld('right',get(newblocks,xi-1,yi))
+					weldbottom=canweld('bottom',block) and canweld('top',get(newblocks,xi,yi+1))
+					weldtop=canweld('top',block) and canweld('bottom',get(newblocks,xi,yi-1))
+					blockweld=(
+						makeweldside(blockweld[0] and weldtop),
+						makeweldside(blockweld[1] and weldleft),
+						makeweldside(blockweld[2] and weldbottom),
+						makeweldside(blockweld[3] and weldright),
+					)
+				if block['type']=='platform': # special case
+					# check if sides are platform
+					blockweld=(
+						blockweld[0],
+						setplatformside(blockweld[1],get(newblocks,xi-1,yi)['type']!='platform'),
+						blockweld[2],
+						setplatformside(blockweld[3],get(newblocks,xi+1,yi)['type']!='platform'),
+					)
+				if block['type'] in frametypes: # special case
+					# check if sides are frame base
+					blockweld=(
+						setframeside(blockweld[0],get(newblocks,xi,yi-1)['type'] in frametypes),
+						setframeside(blockweld[1],get(newblocks,xi-1,yi)['type'] in frametypes),
+						setframeside(blockweld[2],get(newblocks,xi,yi+1)['type'] in frametypes),
+						setframeside(blockweld[3],get(newblocks,xi+1,yi)['type'] in frametypes),
+					)
+				blocktype=blocktypes[block['type']]
+				if blocktype['wired']:
+					# check if sides are wired
+					blockweld=(
+						setwireside(blockweld[0],get(newblocks,xi,yi-1)['type'] in wiredtypes),
+						setwireside(blockweld[1],get(newblocks,xi-1,yi)['type'] in wiredtypes),
+						setwireside(blockweld[2],get(newblocks,xi,yi+1)['type'] in wiredtypes),
+						setwireside(blockweld[3],get(newblocks,xi+1,yi)['type'] in wiredtypes),
+					)
+			with Timer(1):
+				blockweld = tuple(freezeweld(weld) for weld in blockweld)
+			with Timer(2):
+				block = frozendict.frozendict({**block, 'weld': blockweld})
+			with Timer(3):
+				bim = getblockimage(block)
+			im.addimage(bim,xi*16,yi*16)
 	return im.genimage(xsize * 16,ysize * 16)

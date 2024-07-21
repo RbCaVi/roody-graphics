@@ -153,23 +153,30 @@ class App:
         sx,sy = spostowpos((0, 0), self.t)
         sxf,sxd = intfrac(sx)
         syf,syd = intfrac(sy)
-        blocks = [
-            [
-                typing.cast(block.BlockDataIn,{
-                    'type':assetload.idtoblock[a],
-                    'weld':[
-                        block.makeweldside((b >> n & 1) == 1)
-                        for n in [4,7,6,5]
-                    ]
-                })
-                for x in range(sxf, sxf + math.ceil(self.width / 16) + 1)
-                for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
+        with Timer('mkblks'):
+            blocks = [
+                [
+                    typing.cast(block.BlockDataIn,{
+                        'type':assetload.idtoblock[a],
+                        'weld':[
+                            block.makeweldside((b >> n & 1) == 1)
+                            for n in [4,7,6,5]
+                        ]
+                    })
+                    for x in range(sxf, sxf + math.ceil(self.width / 16) + 1)
+                    for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
+                ]
+                for y in range(syf, syf + math.ceil(self.height / 16) + 1)
             ]
-            for y in range(syf, syf + math.ceil(self.height / 16) + 1)
-        ]
-        ims = block.makeimage(blocks,autoweld = False)
-        for im,x,y in ims:
-            self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
+        with Timer('mkimg'):
+            ims = block.makeimage(blocks,autoweld = False)
+        with Timer('blit'):
+            for im,x,y in ims:
+                self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
+        with Timer('select'):
+            x1,y1 = self.srect[0] - sx, self.srect[1] - sy
+            x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
+            pygame.draw.rect(self._display_surf, (230, 255, 230, 100), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16))
 
         if tool.startswith('paste-'):
             blocks = makeblockdata(clipboard)
