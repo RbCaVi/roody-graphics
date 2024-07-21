@@ -1,6 +1,10 @@
 from rsv2 import Chunk
+import typing
 
-def getblock(chs: dict[tuple[int,int],Chunk], x: int, y: int) -> tuple[int,int,int,int,int]:
+Chunks: typing.TypeAlias = dict[tuple[int,int],Chunk]
+Block: typing.TypeAlias = tuple[int,int,int,int,int]
+
+def getblock(chs: Chunks, x: int, y: int) -> Block:
   cx,bx = divmod(x,64)
   cy,by = divmod(y,64)
   
@@ -14,7 +18,7 @@ def getblock(chs: dict[tuple[int,int],Chunk], x: int, y: int) -> tuple[int,int,i
   
   return b
 
-def setblock(chs: dict[tuple[int,int],Chunk], x: int, y: int, b: tuple[int,int,int,int,int]) -> None:
+def setblock(chs: Chunks, x: int, y: int, b: Block) -> None:
   cx,bx = divmod(x,64)
   cy,by = divmod(y,64)
   
