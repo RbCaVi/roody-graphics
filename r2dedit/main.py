@@ -145,7 +145,7 @@ class App:
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
                     y = math.floor(y)
-                    srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
+                    self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s: # save
                 rsv2.writeall(f, chs)
@@ -156,12 +156,12 @@ class App:
             if self.tool == 'weld':
                 if event.key == pygame.K_w: # w toggles weld/select
                     self.tool = 'select'
-            if self.tool == 'select':
+            elif self.tool == 'select':
                 if event.key == pygame.K_w:
                     self.tool = 'weld'
                 if event.key == pygame.K_c: # copy selected area
                     if event.mod & pygame.KMOD_CTRL:
-                        clipboard = getarea(chs, srect)
+                        clipboard = getarea(chs, self.srect)
 
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
