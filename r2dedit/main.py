@@ -56,7 +56,7 @@ class App:
     width: int
     height: int
     t: tuple[int, int]
-    srect: tuple[int, int]
+    srect: tuple[int, int, int, int]
     tool: str
 
     def __init__(self, width: int, height: int) -> None:
@@ -135,12 +135,12 @@ class App:
                     x = math.floor(x)
                     y = math.floor(y)
                     setarea(chs, clipboard, x, y) # paste the clipboard to the world
-                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool] # go back to the original tool
+                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[self.tool] # go back to the original tool
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]: # middle mouse drag to move
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
-            if tool == 'select':
+            if self.tool == 'select':
                 if event.buttons[0]: # left mouse to select
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
@@ -151,14 +151,14 @@ class App:
                 rsv2.writeall(f, chs)
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
-                    if tool in ['select', 'weld']:
-                        tool = {'select': 'paste-s', 'weld': 'paste-w'}[tool] # go to paste mode
-            if tool == 'weld':
+                    if self.tool in ['select', 'weld']:
+                        self.tool = {'select': 'paste-s', 'weld': 'paste-w'}[self.tool] # go to paste mode
+            if self.tool == 'weld':
                 if event.key == pygame.K_w: # w toggles weld/select
-                    tool = 'select'
-            if tool == 'select':
+                    self.tool = 'select'
+            if self.tool == 'select':
                 if event.key == pygame.K_w:
-                    tool = 'weld'
+                    self.tool = 'weld'
                 if event.key == pygame.K_c: # copy selected area
                     if event.mod & pygame.KMOD_CTRL:
                         clipboard = getarea(chs, srect)
@@ -200,7 +200,7 @@ class App:
             x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
             pygame.draw.rect(self._display_surf, (230, 255, 230, 100), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16))
 
-        if tool.startswith('paste-'):
+        if self.tool.startswith('paste-'):
             blocks = makeblockdata(clipboard)
             # halve the alpha too
             ...
