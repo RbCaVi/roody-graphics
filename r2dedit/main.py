@@ -48,6 +48,21 @@ def intfrac(x: float) -> tuple[int,float]:
     assert i == int(i)
     return int(i), f
 
+def getarea(chs: rsvedit.Chunks, srect: tuple[int, int, int, int]) -> list[list[rsvedit.Block]]:
+    x1,y1,x2,y2 = srect
+    return [
+        [
+            rsvedit.getblock(chs, x, y)
+            for x in range(x1, x2 + 1)
+        ]
+        for y in range(y1, y2 + 1)
+    ]
+
+def setarea(chs: rsvedit.Chunks, area: list[list[rsvedit.Block]], x: int, y: int) -> None:
+    for yi,row in enumerate(area):
+        for xi,block in enumerate(row):
+            rsvedit.setblock(chs, x + xi, y + yi, block)
+
 class App:
     clock: pygame.time.Clock
     _running: bool
@@ -58,6 +73,7 @@ class App:
     t: tuple[int, int]
     srect: tuple[int, int, int, int]
     tool: str
+    clipboard: list[list[rsvedit.Block]]
 
     def __init__(self, width: int, height: int) -> None:
         # initialize variables
@@ -68,6 +84,7 @@ class App:
         self.t = (0, 0)
         self.tool = 'select'
         self.srect = 0, 0, 0, 0
+        self.clipboard = []
  
     def on_init(self) -> bool:
         # start the pygame window
@@ -134,7 +151,7 @@ class App:
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
                     y = math.floor(y)
-                    setarea(chs, clipboard, x, y) # paste the clipboard to the world
+                    setarea(chs, self.clipboard, x, y) # paste the clipboard to the world
                 self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[self.tool] # go back to the original tool
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]: # middle mouse drag to move
@@ -161,7 +178,7 @@ class App:
                     self.tool = 'weld'
                 if event.key == pygame.K_c: # copy selected area
                     if event.mod & pygame.KMOD_CTRL:
-                        clipboard = getarea(chs, self.srect)
+                        self.clipboard = getarea(chs, self.srect)
 
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -201,7 +218,23 @@ class App:
             pygame.draw.rect(self._display_surf, (230, 255, 230, 100), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16))
 
         if self.tool.startswith('paste-'):
-            blocks = makeblockdata(clipboard)
+            blocks = [
+                [
+                    typing.cast(block.BlockDataIn,{
+                        'type':assetload.idtoblock[a],
+                        'weld':[
+                            block.makeweldside((b >> n & 1) == 1)
+                            for n in [4,7,6,5]
+                        ]
+                    })
+                    for a,b,c,d,e in row
+                ]
+                for row in self.clipboard
+            ]
+            ims = block.makeimage(blocks,autoweld = False)
+            mx,my = pygame.mouse.get_pos()
+            for im,x,y in ims:
+                self._display_surf.blit(im, (x + mx, y + my))
             # halve the alpha too
             ...
     
