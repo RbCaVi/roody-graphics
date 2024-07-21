@@ -106,6 +106,10 @@ class App:
                 x = math.floor(x)
                 y = math.floor(y)
                 srect = (x, y, x, y)
+            elif tool.startswith('paste-') and event.button in [1, 3]:
+                if event.button == 1:
+                    paste()
+                tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool]
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]: # middle mouse
                 dx,dy = event.rel
@@ -116,8 +120,17 @@ class App:
                 y = math.floor(y)
                 srect = (min(srect[0], x), min(srect[1], y), max(srect[2], x), max(srect[3], y))
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_s:
+            if event.key == pygame.K_s: # save
                 rsv2.writeall(f, chs)
+            if event.key == pygame.K_v:
+                if tool in ['select', 'weld']:
+                    tool = {'select': 'paste-s', 'weld': 'paste-w'}[tool]
+            if tool == 'weld':
+                if event.key == pygame.K_w:
+                    tool = 'select'
+            if tool == 'select':
+                if event.key == pygame.K_w:
+                    tool = 'weld'
 
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
