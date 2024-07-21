@@ -25,14 +25,14 @@ class Timer:
 
     def __enter__(self):
         self.start = time.time()
-        print(f'{self.s}: start at {self.start}')
+        #print(f'{self.s}: start at {self.start}')
 
     def __exit__(self, exc_type, exc, exc_tb):
         if exc is not None:
             return False
         t = time.time()
-        print(f'{self.s}: ended at {t}')
-        print(f'{self.s}: {t - self.start} seconds')
+        #print(f'{self.s}: ended at {t}')
+        #print(f'{self.s}: {t - self.start} seconds')
 
 def spostowpos(spos: tuple[float,float], t: tuple[float,float]) -> tuple[float,float]:
     sx,sy = spos
