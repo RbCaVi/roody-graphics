@@ -56,6 +56,8 @@ class App:
     width: int
     height: int
     t: tuple[int, int]
+    srect: tuple[int, int]
+    tool: str
 
     def __init__(self, width: int, height: int) -> None:
         # initialize variables
@@ -64,6 +66,8 @@ class App:
         self._display_surf = None
         self.size = self.width, self.height = width, height
         self.t = (0, 0)
+        self.tool = 'select'
+        self.srect = 0, 0, 0, 0
  
     def on_init(self) -> bool:
         # start the pygame window
@@ -83,7 +87,7 @@ class App:
             # 3 right
             # 4 scroll up
             # 5 scroll down
-            if tool == 'weld':
+            if self.tool == 'weld':
                 if event.button == 1 or event.button == 3:
                     x,y = spostowpos(event.pos, self.t)
                     xi,xf = intfrac(x)
@@ -119,19 +123,19 @@ class App:
                     if event.button == 1:
                         b = b | mask
                     rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
-            elif tool == 'select':
+            elif self.tool == 'select':
                 if event.button == 1: # select is only left mouse
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
                     y = math.floor(y)
-                    srect = (x, y, x, y)
-            elif tool.startswith('paste-') and event.button in [1, 3]:
+                    self.srect = (x, y, x, y)
+            elif self.tool.startswith('paste-') and event.button in [1, 3]:
                 if event.button == 1: # left click to paste
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
                     y = math.floor(y)
                     setarea(chs, clipboard, x, y) # paste the clipboard to the world
-                tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool] # go back to the original tool
+                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[tool] # go back to the original tool
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]: # middle mouse drag to move
                 dx,dy = event.rel
@@ -141,7 +145,7 @@ class App:
                     x,y = spostowpos(event.pos, self.t)
                     x = math.floor(x)
                     y = math.floor(y)
-                    srect = (min(srect[0], x), min(srect[1], y), max(srect[2], x), max(srect[3], y))
+                    srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s: # save
                 rsv2.writeall(f, chs)
