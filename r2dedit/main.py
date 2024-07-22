@@ -196,7 +196,7 @@ class App:
             blocks = [
                 [
                     typing.cast(block.BlockDataIn,{
-                        'type':assetload.idtoblock[a],
+                        'id':a,
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
                             for n in [4,7,6,5]

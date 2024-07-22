@@ -7,7 +7,7 @@ import collections
 import re
 import typing
 import numpy as np
-from assetload import blockinfos, assetinit
+from assetload import blockinfos, assetinit, idtoblock
 import pygame
 import frozendict
 import time
@@ -35,26 +35,8 @@ rimlights:dict[int, np.ndarray] = {}
 
 vec3:typing.TypeAlias = tuple[float, float, float]
 
-ImageKey = typing.NewType('ImageKey',str)
-
-imagecache: dict[ImageKey, PIL.Image.Image] = {}
-
-ImageArea: typing.TypeAlias = tuple[ImageKey, tuple[int,int], tuple[int,int]]
-
 def convertim(im: PIL.Image.Image) -> pygame.Surface:
     return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode))
-
-def getimage(k: ImageKey) -> PIL.Image.Image:
-	return imagecache[k]
-
-def getimagearea(a: ImageArea) -> PIL.Image.Image:
-	k, (x, y), (w, h) = a
-	im = getimage(k)
-	return im.crop((x, y, x + w, y + h))
-
-def setimage(k: ImageKey, im: PIL.Image.Image) -> None:
-	print('setting imagecache for',k)
-	imagecache[k] = im
 
 def clamp(a:np.ndarray) -> np.ndarray:
 	return np.fmin(np.fmax(a, 0.0), 1.0) # overflow error
@@ -96,7 +78,7 @@ def calc_highlights(lightdir:vec3, normal:np.ndarray, rimlight:np.ndarray) -> np
 fullbright_lightdir = (-0.5, 1.0, 1.0)
 
 @functools.cache
-def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int, block_id:int, flip:bool) -> pygame.Surface:
+def apply_normalmap(block_id:int, rotation:int, flip:bool) -> pygame.Surface:
 	# rotate the light so when the block is rotated back the light is in the right direction
 	lightdir:vec3 = quarter_rotate(fullbright_lightdir, rotation);
 
@@ -104,13 +86,13 @@ def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int,
 
 	normal_array:np.ndarray
 
-	albedo = getimagearea(albedoa)
+	albedo = getalbedo(block_id)
+	normal = getnormal(block_id)
 
-	if normala is None:
+	if normal is None:
 		s0,s1 = albedo.size
-		normal_array = np.full((s0,s1,3),(0.5,0.5,0.5))
+		normal_array = np.full((s1,s0,3),(0,0,1))
 	else:
-		normal = getimagearea(normala)
 		normal_array = np.asarray(normal) / 255 * 2 - 1
 		normal_array = normal_array / np.atleast_3d(np.linalg.norm(normal_array, axis = 2))
 		normal_array = normal_array[:, :, :3]
@@ -140,7 +122,7 @@ def apply_normalmap(albedoa: ImageArea, normala: ImageArea | None, rotation:int,
 		highlights = highlights.astype('uint8')
 		highlightsim:PIL.Image.Image = PIL.Image.fromarray(highlights)
 		out = PIL.ImageChops.add(out,highlightsim)
-			
+	
 	out.putalpha(alpha)
 
 	return convertim(out)
@@ -159,8 +141,6 @@ WeldSideIn: typing.TypeAlias = WeldSide | bool
 WeldSidesIn: typing.TypeAlias = tuple[WeldSideIn,WeldSideIn,WeldSideIn,WeldSideIn]
 
 class ImageBit:
-	im:ImageKey
-	normal:ImageKey | None
 	x:int
 	y:int
 	w:int
@@ -169,22 +149,18 @@ class ImageBit:
 	rotation:int
 	block_id:int
 
-	def __init__(self,im:tuple[ImageKey,ImageKey | None] | typing.Self,x:int=0,y:int=0,w:int=16,h:int=16,block_id:int | None = None) -> None:
+	def __init__(self,block:int | typing.Self,x:int=0,y:int=0,w:int=16,h:int=16) -> None:
 		# the dimensions of the part of the image to use
 		self.x = x
 		self.y = y
 		self.w = w
 		self.h = h
-		if isinstance(im,ImageBit):
+		if isinstance(block,ImageBit):
 			# gonna just assume x,y,w,h stays inside the image
-			self.x += im.x
-			self.y += im.y
-			block_id = im.block_id
-			im = im.im, im.normal
-		if block_id is None:
-			raise ValueError('no block id given/inherited')
-		self.block_id = block_id
-		self.im, self.normal = im
+			self.x += block.x
+			self.y += block.y
+			block = block.block_id
+		self.block_id = block
 		# rotation
 		self.flip = False # first
 		self.rotation = 0 # second
@@ -196,13 +172,12 @@ class ImageBit:
 		self.rotation += r
 
 	def getim(self) -> pygame.Surface:
-		albedoa = self.im,(self.x, self.y), (self.w, self.h)
-		if self.normal is not None:
-			normala = self.normal,(self.x, self.y), (self.w, self.h)
-		else:
-			normala = None
-
-		im = apply_normalmap(albedoa, normala, self.rotation, self.block_id, self.flip)
+		im = apply_normalmap(self.block_id, self.rotation, self.flip)
+		try:
+			im = im.subsurface((self.x, self.y, self.w, self.h))
+		except:
+			print(self.block_id, self.rotation, self.flip, self.x, self.y, self.w, self.h)
+			raise
 		# i have to calculate the diffuse and "rimlight"
 		# self.flip = flip_uv_x
 		# self.rotate = either rotation or (3 - rotation)
@@ -241,21 +216,7 @@ class Image:
 			dx, dy = rotatexy(dx, dy, r, flip)
 			self.ims[i]=((x + dx, y + dy), self.ims[i][1])
 
-	def getdims(self) -> tuple[int,int]:
-		mx:float = 0
-		my:float = 0
-		for (x, y), im in self.ims:
-			w, h = rotatexy(im.w, im.h, im.rotation, im.flip)
-			mx = max(mx, x + w / 2)
-			my = max(my, y + h / 2)
-		return (int(mx),int(my))
-
-	def genimage(self,w:int | None=None,h:int | None=None) -> list[tuple[pygame.Surface,int,int]]:
-		defaultw, defaulth = self.getdims()
-		if w is None:
-			w = defaultw
-		if h is None:
-			h = defaulth
+	def genimage(self) -> list[tuple[pygame.Surface,int,int]]:
 		out=[]
 		for (x, y), im in self.ims:
 			pim = im.getim()
@@ -263,7 +224,7 @@ class Image:
 		return out
 
 class BlockDataLoose(typing.TypedDict):
-	type:str
+	id:int
 	rotate:typing.NotRequired[int]
 	weld:typing.NotRequired[WeldSides]
 	data:typing.NotRequired[str]
@@ -279,7 +240,7 @@ class BlockDataLoose(typing.TypedDict):
 	sizey:typing.NotRequired[int]
 
 class BlockData(typing.TypedDict):
-	type:str
+	id:int
 	rotate:int
 	weld:WeldSides
 	data:typing.NotRequired[str]
@@ -329,25 +290,20 @@ for name,texture in data.items():
 		rimlights[blockinfos[name]['id']] = rimlight_array
 
 @functools.cache
-def getblockims(block:str) -> tuple[ImageKey, ImageKey | None]:
-	albedok: ImageKey
-	normalk: ImageKey | None
-	if 'normal' in blockpaths[block]:
-		try:
-			normalk = typing.cast(ImageKey,os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal']))
-			normalim = PIL.Image.open(normalk).convert('RGBA')
-			setimage(normalk, normalim)
-		except FileNotFoundError:
-			normalk = None
-	else:
-		normalk = None
-	albedok = typing.cast(ImageKey,os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo']))
+def getalbedo(block_id:int) -> PIL.Image.Image:
+	block = idtoblock[block_id]
+	albedok = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['albedo'])
 	albedoim = PIL.Image.open(albedok).convert('RGBA')
-	setimage(albedok, albedoim)
-	return (
-		albedok,
-		normalk,
-	)
+	return albedoim
+
+@functools.cache
+def getnormal(block_id:int) -> PIL.Image.Image | None:
+	block = idtoblock[block_id]
+	if 'normal' in blockpaths[block]:
+		normalk = os.path.join(cfgstr("localGame.texture.texturePathFolder"),blockpaths[block]['normal'])
+		return PIL.Image.open(normalk).convert('RGBA')
+	else:
+		return None
 
 def getblocksbyattr(attr:str) -> list[str]:
 	return [b for b,data in blockinfos.items() if attr in data['attributes']]
@@ -439,17 +395,16 @@ def twowayfilter(data:BlockData) -> BlockData:
 	return data
 
 @functools.cache
-def _getblocktexture(block:str,offsetx:int,offsety:int,sizex:int,sizey:int) -> ImageBit:
-	im1, im2 = getblockims(block)
-	return ImageBit((im1,im2),offsetx,offsety,offsetx+sizex,offsety+sizey,blockinfos[block]['id'])
+def _getblocktexture(block_id:int,offsetx:int,offsety:int,sizex:int,sizey:int) -> ImageBit:
+	return ImageBit(block_id,offsetx,offsety,offsetx+sizex,offsety+sizey)
 
 def getblocktexture(data:BlockDataLoose) -> ImageBit:
-	block=data['type']
+	blockid=data['id']
 	offsetx=data.get('offsetx',0) or 0
 	offsety=data.get('offsety',0) or 0
 	sizex=data.get('sizex',32) or 32
 	sizey=data.get('sizey',32) or 32
-	return _getblocktexture(block,offsetx,offsety,sizex,sizey)
+	return _getblocktexture(blockid,offsetx,offsety,sizex,sizey)
 
 def drawblocktexture(image:ImageBit,weld:WeldSides) -> Image:
 	top,left,bottom,right=weld
@@ -496,12 +451,12 @@ def overlay2(data:BlockData) -> Image:
 	return im2
 
 def wafer(data:BlockData) -> Image:
-	return defaultblock({**data,'type':'wafer'})
+	return defaultblock({**data,'id':blockinfos['wafer']['id']})
 
 def frame(data:BlockData) -> Image:
 	welded=data['weld']
 	rotate=data['rotate']
-	image=getblocktexture({'type':'frame','sizex':64})
+	image=getblocktexture({'id':blockinfos['frame']['id'],'sizex':64})
 	top,left,bottom,right=rotatewelded(welded,rotate)
 	im = Image()
 	for x,xside in [(0,left),(8,right)]:
@@ -515,7 +470,7 @@ def frame(data:BlockData) -> Image:
 	return im
 
 def wiretop(data:BlockData) -> Image:
-	if data['type'] in outputtypes:
+	if idtoblock[data['id']] in outputtypes:
 		welded=data['weld']
 		rotate=data['rotate']
 		top,_,_,_=rotatewelded(welded,rotate) # different texture by if the output is connected
@@ -531,7 +486,7 @@ def wire(data:BlockData) -> Image:
 		offset=32 if bdata['state']=='on' else 0
 	else:
 		offset=0
-	image=getblocktexture({'type':'wire','offsetx':offset})
+	image=getblocktexture({'id':blockinfos['wire']['id'],'offsetx':offset})
 	top,left,bottom,right=welded
 	im = Image()
 	for x,xside in [(0,left),(8,right)]:
@@ -545,8 +500,8 @@ def actuator(data:BlockData) -> Image:
 	top,left,bottom,right=rotatewelded(welded,rotate)
 	weld1=weldedside,left,bottom,right
 	weld2=top,unweldedside,weldedside,unweldedside
-	im1 = defaultblock({**data,'type':'actuator_base','weld':weld1,'rotate':0})
-	im2 = defaultblock({**data,'type':'actuator_head','weld':weld2,'rotate':0})
+	im1 = defaultblock({**data,'id':blockinfos['actuator_base']['id'],'weld':weld1,'rotate':0})
+	im2 = defaultblock({**data,'id':blockinfos['actuator_head']['id'],'weld':weld2,'rotate':0})
 	im = Image()
 	im.addimage(im1,0,0)
 	im.addimage(im2,0,0)
@@ -566,7 +521,7 @@ def platform(data:BlockData) -> Image:
 
 def wirecomponent(data:BlockData) -> BlockData:
 	if 'data' in data:
-		typ=data['type']
+		typ=idtoblock[data['id']]
 		if typ in ["port","accelerometer","matcher","detector","toggler","trigger"]:
 			# instantaneous
 			# top off bottom on texture
@@ -736,29 +691,26 @@ def rotatewelded(welded:WeldSides,rotate:int) -> WeldSides:
 def normalize(block:BlockDataIn) -> BlockData:
 	weld:WeldSidesIn
 	if block is None:
-		typ = 'air'
+		blockid = 0
 		rotate = 0
 		weld = (True,True,True,True)
 	elif isinstance(block,str):
-		typ = block
+		blockid = blockinfos[block]['id']
 		rotate = 0
 		weld = (True,True,True,True)
 	elif isinstance(block,(tuple,list)):
-		b = dict(zip(["type","rotate","weld"],block))
-		typ = b.get('type') or 'air'
+		b = dict(zip(["id","rotate","weld"],block))
+		blockid = b.get('id') or 0
 		rotate = b.get('rotate') or 0
 		weld = b.get('weld') or (True,True,True,True)
 	else:
-		typ = block.get('type') or 'air'
+		blockid = block.get('id') or 0
 		rotate = block.get('rotate') or 0
 		weld = block.get('weld') or (True,True,True,True)
 	weld2=tuple(makeweldside(w) for w in weld)
 	assert len(weld2)==4
-	typ = typ.lower()
-	if typ == 'nic':
-		typ = 'air'
 	out: BlockData = {
-		"type":typ,
+		"id":blockid,
 		"rotate":rotate,
 		"weld":weld2,
 	}
@@ -778,14 +730,14 @@ def get(vss:list[list[BlockData]],xi:int,yi:int) -> BlockData:
 
 # can this block weld on this side?
 def canweld(side:str,block:BlockData) -> bool:
-	sides = blockinfos[block['type']]['weldablesides']
+	sides = blockinfos[idtoblock[block['id']]]['weldablesides']
 	i={'top':0,'bottom':2,'left':1,'right':3}[side]+4-block['rotate']
 	i=i%4
 	return sides[i] and iswelded(block['weld'][{'top':0,'bottom':2,'left':1,'right':3}[side]])
 
 @functools.cache
 def getblockimage(block: BlockData) -> Image:
-	blocktype=blocktypes[block['type']]
+	blocktype=blocktypes[idtoblock[block['id']]]
 	im=Image()
 	for datafilter in blocktype['datafilters']:
 		block=datafilter(block)
@@ -816,7 +768,7 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 		for yi in range(ysize):
 			with Timer(0):
 				block=get(newblocks,xi,yi)
-				if block['type']=='air':
+				if block['id']==0: # air
 					continue
 				blockweld = tuple(block['weld'])
 				if autoweld:
@@ -830,30 +782,30 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 						makeweldside(blockweld[2] and weldbottom),
 						makeweldside(blockweld[3] and weldright),
 					)
-				if block['type']=='platform': # special case
+				if idtoblock[block['id']]=='platform': # special case
 					# check if sides are platform
 					blockweld=(
 						blockweld[0],
-						setplatformside(blockweld[1],get(newblocks,xi-1,yi)['type']!='platform'),
+						setplatformside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']]!='platform'),
 						blockweld[2],
-						setplatformside(blockweld[3],get(newblocks,xi+1,yi)['type']!='platform'),
+						setplatformside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']]!='platform'),
 					)
-				if block['type'] in frametypes: # special case
+				if idtoblock[block['id']] in frametypes: # special case
 					# check if sides are frame base
 					blockweld=(
-						setframeside(blockweld[0],get(newblocks,xi,yi-1)['type'] in frametypes),
-						setframeside(blockweld[1],get(newblocks,xi-1,yi)['type'] in frametypes),
-						setframeside(blockweld[2],get(newblocks,xi,yi+1)['type'] in frametypes),
-						setframeside(blockweld[3],get(newblocks,xi+1,yi)['type'] in frametypes),
+						setframeside(blockweld[0],idtoblock[get(newblocks,xi,yi-1)['id']] in frametypes),
+						setframeside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']] in frametypes),
+						setframeside(blockweld[2],idtoblock[get(newblocks,xi,yi+1)['id']] in frametypes),
+						setframeside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']] in frametypes),
 					)
-				blocktype=blocktypes[block['type']]
+				blocktype=blocktypes[idtoblock[block['id']]]
 				if blocktype['wired']:
 					# check if sides are wired
 					blockweld=(
-						setwireside(blockweld[0],get(newblocks,xi,yi-1)['type'] in wiredtypes),
-						setwireside(blockweld[1],get(newblocks,xi-1,yi)['type'] in wiredtypes),
-						setwireside(blockweld[2],get(newblocks,xi,yi+1)['type'] in wiredtypes),
-						setwireside(blockweld[3],get(newblocks,xi+1,yi)['type'] in wiredtypes),
+						setwireside(blockweld[0],idtoblock[get(newblocks,xi,yi-1)['id']] in wiredtypes),
+						setwireside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']] in wiredtypes),
+						setwireside(blockweld[2],idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes),
+						setwireside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes),
 					)
 			with Timer(1):
 				blockweld = tuple(freezeweld(weld) for weld in blockweld)
@@ -862,4 +814,4 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 			with Timer(3):
 				bim = getblockimage(block)
 			im.addimage(bim,xi*16,yi*16)
-	return im.genimage(xsize * 16,ysize * 16)
+	return im.genimage()
