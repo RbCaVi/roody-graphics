@@ -209,13 +209,15 @@ class App:
             ]
         with Timer('mkimg'):
             ims = block.makeimage(blocks,autoweld = False)
+        self._display_surf.lock()
         with Timer('blit'):
             for im,x,y in ims:
                 self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
-        with Timer('select'):
+        
+        if self.tool == 'select':
             x1,y1 = self.srect[0] - sx, self.srect[1] - sy
             x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
-            pygame.draw.rect(self._display_surf, (230, 255, 230, 100), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16))
+            pygame.draw.rect(self._display_surf, (230, 255, 230), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16), 2)
 
         if self.tool.startswith('paste-'):
             blocks = [
@@ -237,6 +239,7 @@ class App:
                 self._display_surf.blit(im, (x + mx, y + my))
             # halve the alpha too
             ...
+        self._display_surf.unlock()
     
     def on_cleanup(self) -> None:
         # close the pygame window
