@@ -63,6 +63,17 @@ def setarea(chs: rsvedit.Chunks, area: list[list[rsvedit.Block]], x: int, y: int
         for xi,block in enumerate(row):
             rsvedit.setblock(chs, x + xi, y + yi, block)
 
+class Tool:
+    def activate(self, prevtool: Tool) -> None:
+        pass
+
+    def event(self, app: "App", event: pygame.event.Event) -> bool: # did this tool consume the event?
+        return False
+
+class WeldTool(Tool):
+    def event(self, app: "App", event: pygame.event.Event) -> bool:
+        return False
+
 class App:
     clock: pygame.time.Clock
     _running: bool
