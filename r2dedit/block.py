@@ -311,7 +311,7 @@ def getblocksbyattr(attr:str) -> list[str]:
 def getblocksbynotattr(attr:str) -> list[str]:
 	return [b for b,data in blockinfos.items() if attr not in data['attributes']]
 
-wiredrawtypes=[b,data['collision'] for b,data in blockinfos.items() if 'wire_draw' in data['attributes']]
+wiredrawtypes=[(b,data['collision']) for b,data in blockinfos.items() if 'wire_draw' in data['attributes']]
 
 # wire components on a wafer
 wafertypes=[b for b,col in wiredrawtypes if 'solid' in col]
@@ -323,7 +323,7 @@ outputtypes=[
 	"cascade","counter"
 ]
 # wire components on a frame
-wirettypes=[b for b,col in wiredrawtypes if 'solid' not in col]
+wiretypes=[b for b,col in wiredrawtypes if 'solid' not in col]
 # all blocks that connect to wire
 wiredtypes=getblocksbyattr("wire_connect")
 # blocks that only face one direction

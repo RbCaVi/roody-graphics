@@ -165,6 +165,7 @@ class App:
                     self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s: # save
+                print('Saving!')
                 rsv2.writeall(f, chs)
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
@@ -210,7 +211,6 @@ class App:
             ]
         with Timer('mkimg'):
             ims = block.makeimage(blocks,autoweld = False)
-        self._display_surf.lock()
         with Timer('blit'):
             for im,x,y in ims:
                 self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
@@ -224,7 +224,7 @@ class App:
             blocks = [
                 [
                     typing.cast(block.BlockDataIn,{
-                        'type':assetload.idtoblock[a],
+                        'id':a,
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
                             for n in [4,7,6,5]
@@ -241,7 +241,6 @@ class App:
                 self._display_surf.blit(im, (x + mx, y + my))
             # halve the alpha too
             ...
-        self._display_surf.unlock()
     
     def on_cleanup(self) -> None:
         # close the pygame window
