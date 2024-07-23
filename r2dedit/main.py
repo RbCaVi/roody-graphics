@@ -200,7 +200,8 @@ class App:
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
                             for n in [4,7,6,5]
-                        ]
+                        ],
+                        'rotate':[0,3,2,1][c & 3]
                     })
                     for x in range(sxf, sxf + math.ceil(self.width / 16) + 1)
                     for a,b,c,d,e in (rsvedit.getblock(chs,x,y),)
@@ -227,7 +228,8 @@ class App:
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
                             for n in [4,7,6,5]
-                        ]
+                        ],
+                        'rotate':[0,3,2,1][c & 3]
                     })
                     for a,b,c,d,e in row
                 ]
