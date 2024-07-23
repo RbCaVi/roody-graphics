@@ -72,6 +72,57 @@ class Tool:
 
 class WeldTool(Tool):
     def event(self, app: "App", event: pygame.event.Event) -> bool:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # 1 left
+            # 2 middle
+            # 3 right
+            # 4 scroll up
+            # 5 scroll down
+            if event.button == 1 or event.button == 3:
+                    x,y = spostowpos(event.pos, self.t)
+                    xi,xf = intfrac(x)
+                    yi,yf = intfrac(y)
+                    xf -= 0.5
+                    yf -= 0.5
+                    dxy = [
+                        ( 0, -1),
+                        ( 1,  0),
+                        ( 0,  1),
+                        (-1,  0),
+                    ]
+                    if abs(xf) > abs(yf):
+                        if xf > 0:
+                            side = 1
+                        else:
+                            side = 3
+                    else:
+                        if yf > 0:
+                            side = 2
+                        else:
+                            side = 0
+                    a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
+                    mask = 1 << (side + 4)
+                    b = b & ~mask # clear the weld bit
+                    if event.button == 1: # if left mouse (weld)
+                        b = b | mask # set the weld bit
+                    rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
+                    side2 = (side + 2) % 4
+                    a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
+                    mask = 1 << (side2 + 4)
+                    b = b & ~mask
+                    if event.button == 1:
+                        b = b | mask
+                    rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
+                return True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_v: # v
+                if event.mod & pygame.KMOD_CTRL: # + ctrl
+                    app.activate(app.paste) # the paste tool either overrides this one or deactivates and restores it
+                    return True
+            if event.key == pygame.K_w: # w toggles weld/select
+                app.activate(app.select)
+                app.deactivate(self)
+                return True
         return False
 
 class App:
