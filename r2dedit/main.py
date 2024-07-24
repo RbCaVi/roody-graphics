@@ -133,9 +133,6 @@ class WeldTool(Tool):
 class SelectTool:
     srect: tuple[int, int, int, int]
 
-    def __init__(self):
-        self.srect = 0, 0, 0, 0
-
     def activate(self):
         self.srect = None
 
@@ -157,6 +154,8 @@ class SelectTool:
                 x = math.floor(x)
                 y = math.floor(y)
                 self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
+            if event.buttons[1]: # right mouse to cancel
+                self.srect = None
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
@@ -169,7 +168,16 @@ class SelectTool:
                 app.deactivate(self)
             if event.key == pygame.K_c: # copy selected area
                 if event.mod & pygame.KMOD_CTRL:
-                    app.clipboard = getarea(chs, self.srect)
+                    if self.srect is not None:
+                        app.clipboard = getarea(chs, self.srect)
+
+    def draw(self, app: "App"):
+        if self.srect is None:
+            return
+        sx,sy = spostowpos((0, 0), app.t)
+        x1,y1 = self.srect[0] - sx, self.srect[1] - sy
+        x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
+        pygame.draw.rect(app._display_surf, (230, 255, 230), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16), 2)
 
 class PasteTool:
     def event(self, app: "App", event: pygame.event.Event) -> bool:
@@ -188,6 +196,28 @@ class PasteTool:
                 app.activate(self.prevtool)
                 app.deactivate(self) # go back to the original tool
 
+    def draw(self, app: "App"):
+            blocks = [
+                [
+                    typing.cast(block.BlockDataIn,{
+                        'id':a,
+                        'weld':[
+                            block.makeweldside((b >> n & 1) == 1)
+                            for n in [4,7,6,5]
+                        ],
+                        'rotate':[0,3,2,1][c & 3]
+                    })
+                    for a,b,c,d,e in row
+                ]
+                for row in self.clipboard
+            ]
+            ims = block.makeimage(blocks,autoweld = False)
+            mx,my = pygame.mouse.get_pos()
+            for im,x,y in ims:
+                self._display_surf.blit(im, (x + mx, y + my))
+            # halve the alpha too
+            ...
+
 class App:
     clock: pygame.time.Clock
     _running: bool
@@ -196,8 +226,11 @@ class App:
     width: int
     height: int
     t: tuple[int, int]
-    tool: str
     clipboard: list[list[rsvedit.Block]]
+    paste: Tool
+    weld: Tool
+    select: Tool
+    tools: list[tuple[bool, Tool]]
 
     def __init__(self, width: int, height: int) -> None:
         # initialize variables
@@ -206,7 +239,10 @@ class App:
         self._display_surf = None
         self.size = self.width, self.height = width, height
         self.t = (0, 0)
-        self.tool = 'select'
+        self.weld = WeldTool()
+        self.select = SelectTool()
+        self.paste = PasteTool()
+        self.tools = [(True, self.weld), (False, self.select), (False, self.paste)]
         self.clipboard = []
  
     def on_init(self) -> bool:
@@ -221,88 +257,22 @@ class App:
         if event.type == pygame.QUIT:
             # close the window when the x is clicked
             self._running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            # 1 left
-            # 2 middle
-            # 3 right
-            # 4 scroll up
-            # 5 scroll down
-            if self.tool == 'weld':
-                if event.button == 1 or event.button == 3:
-                    x,y = spostowpos(event.pos, self.t)
-                    xi,xf = intfrac(x)
-                    yi,yf = intfrac(y)
-                    xf -= 0.5
-                    yf -= 0.5
-                    dxy = [
-                        ( 0, -1),
-                        ( 1,  0),
-                        ( 0,  1),
-                        (-1,  0),
-                    ]
-                    if abs(xf) > abs(yf):
-                        if xf > 0:
-                            side = 1
-                        else:
-                            side = 3
-                    else:
-                        if yf > 0:
-                            side = 2
-                        else:
-                            side = 0
-                    a,b,c,d,e = rsvedit.getblock(chs, xi, yi)
-                    mask = 1 << (side + 4)
-                    b = b & ~mask # clear the weld bit
-                    if event.button == 1: # if left mouse (weld)
-                        b = b | mask # set the weld bit
-                    rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
-                    side2 = (side + 2) % 4
-                    a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
-                    mask = 1 << (side2 + 4)
-                    b = b & ~mask
-                    if event.button == 1:
-                        b = b | mask
-                    rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
-            elif self.tool == 'select':
-                if event.button == 1: # select is only left mouse
-                    x,y = spostowpos(event.pos, self.t)
-                    x = math.floor(x)
-                    y = math.floor(y)
-                    self.srect = (x, y, x, y)
-            elif self.tool.startswith('paste-') and event.button in [1, 3]:
-                if event.button == 1: # left click to paste
-                    x,y = spostowpos(event.pos, self.t)
-                    x = math.floor(x)
-                    y = math.floor(y)
-                    setarea(chs, self.clipboard, x, y) # paste the clipboard to the world
-                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[self.tool] # go back to the original tool
+            return
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[1]: # middle mouse drag to move
                 dx,dy = event.rel
                 self.t = (self.t[0] + dx, self.t[1] + dy)
-            if self.tool == 'select':
-                if event.buttons[0]: # left mouse to select
-                    x,y = spostowpos(event.pos, self.t)
-                    x = math.floor(x)
-                    y = math.floor(y)
-                    self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
+                return
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s: # save
                 print('Saving!')
                 rsv2.writeall(f, chs)
-            if event.key == pygame.K_v: # v
-                if event.mod & pygame.KMOD_CTRL: # + ctrl
-                    if self.tool in ['select', 'weld']:
-                        self.tool = {'select': 'paste-s', 'weld': 'paste-w'}[self.tool] # go to paste mode
-            if self.tool == 'weld':
-                if event.key == pygame.K_w: # w toggles weld/select
-                    self.tool = 'select'
-            elif self.tool == 'select':
-                if event.key == pygame.K_w:
-                    self.tool = 'weld'
-                if event.key == pygame.K_c: # copy selected area
-                    if event.mod & pygame.KMOD_CTRL:
-                        self.clipboard = getarea(chs, self.srect)
+                return
+        for active,tool in tools:
+            if not active:
+                continue
+            if tool.event(app,event): # captured
+                return
 
     def on_loop(self) -> None:
         # wait to ensure a uniform framerate
@@ -338,32 +308,10 @@ class App:
             for im,x,y in ims:
                 self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
         
-        if self.tool == 'select':
-            x1,y1 = self.srect[0] - sx, self.srect[1] - sy
-            x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
-            pygame.draw.rect(self._display_surf, (230, 255, 230), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16), 2)
-
-        if self.tool.startswith('paste-'):
-            blocks = [
-                [
-                    typing.cast(block.BlockDataIn,{
-                        'id':a,
-                        'weld':[
-                            block.makeweldside((b >> n & 1) == 1)
-                            for n in [4,7,6,5]
-                        ],
-                        'rotate':[0,3,2,1][c & 3]
-                    })
-                    for a,b,c,d,e in row
-                ]
-                for row in self.clipboard
-            ]
-            ims = block.makeimage(blocks,autoweld = False)
-            mx,my = pygame.mouse.get_pos()
-            for im,x,y in ims:
-                self._display_surf.blit(im, (x + mx, y + my))
-            # halve the alpha too
-            ...
+        for active,tool in tools:
+            if not active:
+                continue
+            tool.draw(app)
     
     def on_cleanup(self) -> None:
         # close the pygame window
@@ -385,6 +333,16 @@ class App:
                 self.on_event(event)
         # clean up everything that might mess up something later
         self.on_cleanup()
+
+    def activate(self, tool):
+        for i,(active,t) in self.tools:
+            if t is tool:
+                self.tools[i] = True, tool
+
+    def deactivate(self, tool):
+        for i,(active,t) in self.tools:
+            if t is tool:
+                self.tools[i] = False, tool
 
 if __name__ == "__main__" :
     theApp = App(16 * 64,16 * 64)
