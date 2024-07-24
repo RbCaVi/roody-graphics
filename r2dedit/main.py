@@ -126,6 +126,36 @@ class WeldTool(Tool):
                 return True
         return False
 
+class SelectTool:
+    def event(self, app: "App", event: pygame.event.Event) -> bool:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # 1 left
+            # 2 middle
+            # 3 right
+            # 4 scroll up
+            # 5 scroll down
+            if event.button == 1: # select is only left mouse
+                x,y = spostowpos(event.pos, self.t)
+                x = math.floor(x)
+                y = math.floor(y)
+                self.srect = (x, y, x, y)
+        if event.type == pygame.MOUSEMOTION:
+            if event.buttons[0]: # left mouse to select
+                x,y = spostowpos(event.pos, self.t)
+                x = math.floor(x)
+                y = math.floor(y)
+                self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_v: # v
+                if event.mod & pygame.KMOD_CTRL: # + ctrl
+                    app.activate(app.paste) # the paste tool either overrides this one or deactivates and restores it
+                    return True
+            if event.key == pygame.K_w:
+                self.tool = 'weld'
+            if event.key == pygame.K_c: # copy selected area
+                if event.mod & pygame.KMOD_CTRL:
+                    self.clipboard = getarea(chs, self.srect)
+
 class App:
     clock: pygame.time.Clock
     _running: bool
