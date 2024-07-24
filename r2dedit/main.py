@@ -156,6 +156,25 @@ class SelectTool:
                 if event.mod & pygame.KMOD_CTRL:
                     self.clipboard = getarea(chs, self.srect)
 
+class PasteTool:
+    def activate(self, prevtool: Tool) -> None:
+        self.prevtool = prevtool
+
+    def event(self, app: "App", event: pygame.event.Event) -> bool:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # 1 left
+            # 2 middle
+            # 3 right
+            # 4 scroll up
+            # 5 scroll down
+            if event.button in [1, 3]:
+                if event.button == 1: # left click to paste
+                    x,y = spostowpos(event.pos, self.t)
+                    x = math.floor(x)
+                    y = math.floor(y)
+                    setarea(chs, app.clipboard, x, y) # paste the clipboard to the world
+                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[self.tool] # go back to the original tool
+
 class App:
     clock: pygame.time.Clock
     _running: bool
