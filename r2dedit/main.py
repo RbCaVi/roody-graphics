@@ -63,12 +63,15 @@ def setarea(chs: rsvedit.Chunks, area: list[list[rsvedit.Block]], x: int, y: int
         for xi,block in enumerate(row):
             rsvedit.setblock(chs, x + xi, y + yi, block)
 
-class Tool:
-    def activate(self, prevtool: Tool) -> None:
+class Tool(typing.Protocol):
+    def activate(self) -> None:
         pass
 
     def event(self, app: "App", event: pygame.event.Event) -> bool: # did this tool consume the event?
         return False
+
+    def draw(self, app: "App") -> None:
+        pass
 
 class WeldTool(Tool):
     def event(self, app: "App", event: pygame.event.Event) -> bool:
@@ -128,6 +131,14 @@ class WeldTool(Tool):
         return False
 
 class SelectTool:
+    srect: tuple[int, int, int, int]
+
+    def __init__(self):
+        self.srect = 0, 0, 0, 0
+
+    def activate(self):
+        self.srect = None
+
     def event(self, app: "App", event: pygame.event.Event) -> bool:
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 1 left
@@ -136,13 +147,13 @@ class SelectTool:
             # 4 scroll up
             # 5 scroll down
             if event.button == 1: # select is only left mouse
-                x,y = spostowpos(event.pos, self.t)
+                x,y = spostowpos(event.pos, app.t)
                 x = math.floor(x)
                 y = math.floor(y)
                 self.srect = (x, y, x, y)
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[0]: # left mouse to select
-                x,y = spostowpos(event.pos, self.t)
+                x,y = spostowpos(event.pos, app.t)
                 x = math.floor(x)
                 y = math.floor(y)
                 self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
@@ -161,9 +172,6 @@ class SelectTool:
                     app.clipboard = getarea(chs, self.srect)
 
 class PasteTool:
-    def activate(self, prevtool: Tool) -> None:
-        self.prevtool = prevtool
-
     def event(self, app: "App", event: pygame.event.Event) -> bool:
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 1 left
@@ -171,13 +179,14 @@ class PasteTool:
             # 3 right
             # 4 scroll up
             # 5 scroll down
-            if event.button in [1, 3]:
+            if event.button in [1, 3]: # right click to cancel
                 if event.button == 1: # left click to paste
-                    x,y = spostowpos(event.pos, self.t)
+                    x,y = spostowpos(event.pos, app.t)
                     x = math.floor(x)
                     y = math.floor(y)
                     setarea(chs, app.clipboard, x, y) # paste the clipboard to the world
-                self.tool = {'paste-s': 'select', 'paste-w': 'weld'}[self.tool] # go back to the original tool
+                app.activate(self.prevtool)
+                app.deactivate(self) # go back to the original tool
 
 class App:
     clock: pygame.time.Clock
@@ -187,7 +196,6 @@ class App:
     width: int
     height: int
     t: tuple[int, int]
-    srect: tuple[int, int, int, int]
     tool: str
     clipboard: list[list[rsvedit.Block]]
 
@@ -199,7 +207,6 @@ class App:
         self.size = self.width, self.height = width, height
         self.t = (0, 0)
         self.tool = 'select'
-        self.srect = 0, 0, 0, 0
         self.clipboard = []
  
     def on_init(self) -> bool:
