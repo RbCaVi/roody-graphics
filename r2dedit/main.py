@@ -107,12 +107,13 @@ class WeldTool(Tool):
                     b = b | mask # set the weld bit
                 rsvedit.setblock(chs, xi, yi, (a,b,c,d,e))
                 side2 = (side + 2) % 4
-                a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
-                mask = 1 << (side2 + 4)
-                b = b & ~mask
-                if event.button == 1:
-                    b = b | mask
-                rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
+                if not (pygame.key.get_mods() & pygame.KMOD_CTRL): # ctrl to weld/unweld only one side
+                    a,b,c,d,e = rsvedit.getblock(chs, xi+dxy[side][0], yi+dxy[side][1])
+                    mask = 1 << (side2 + 4)
+                    b = b & ~mask
+                    if event.button == 1:
+                        b = b | mask
+                    rsvedit.setblock(chs, xi+dxy[side][0], yi+dxy[side][1], (a,b,c,d,e))
                 return True
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_v: # v
