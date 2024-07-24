@@ -9,7 +9,7 @@ import typing
 import numpy as np
 from assetload import blockinfos, assetinit, idtoblock
 import pygame
-import frozendict
+#import frozendict
 import time
 
 class Timer:
@@ -730,7 +730,7 @@ def canweld(side:str,block:BlockData) -> bool:
 	i=i%4
 	return sides[i] and iswelded(block['weld'][{'top':0,'bottom':2,'left':1,'right':3}[side]])
 
-@functools.cache
+#@functools.cache
 def getblockimage(block: BlockData) -> Image:
 	blocktype=blocktypes[idtoblock[block['id']]]
 	im=Image()
@@ -741,8 +741,8 @@ def getblockimage(block: BlockData) -> Image:
 		im.addimage(layer(block),0,0) # paste the block
 	return im
 
-def freezeweld(weld):
-	return frozendict.frozendict(weld)
+#def freezeweld(weld):
+#	return frozendict.frozendict(weld)
 
 # the main method
 # blocks is a grid of blocks
@@ -805,7 +805,8 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 			with Timer(1):
 				blockweld = tuple(freezeweld(weld) for weld in blockweld)
 			with Timer(2):
-				block = frozendict.frozendict({**block, 'weld': blockweld})
+				#block = frozendict.frozendict({**block, 'weld': blockweld})
+				block['weld']=blockweld
 			with Timer(3):
 				bim = getblockimage(block)
 			im.addimage(bim,xi*16,yi*16)
