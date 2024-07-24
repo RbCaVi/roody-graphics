@@ -119,6 +119,7 @@ class WeldTool(Tool):
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
                     app.activate(app.paste) # the paste tool either overrides this one or deactivates and restores it
+                    app.deactivate(self)
                     return True
             if event.key == pygame.K_w: # w toggles weld/select
                 app.activate(app.select)
@@ -149,12 +150,15 @@ class SelectTool:
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
                     app.activate(app.paste) # the paste tool either overrides this one or deactivates and restores it
+                    app.paste.prevtool = self
+                    app.deactivate(self)
                     return True
             if event.key == pygame.K_w:
-                self.tool = 'weld'
+                app.activate(app.weld)
+                app.deactivate(self)
             if event.key == pygame.K_c: # copy selected area
                 if event.mod & pygame.KMOD_CTRL:
-                    self.clipboard = getarea(chs, self.srect)
+                    app.clipboard = getarea(chs, self.srect)
 
 class PasteTool:
     def activate(self, prevtool: Tool) -> None:
