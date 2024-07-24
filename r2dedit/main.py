@@ -1,9 +1,7 @@
 import pygame
-import PIL
 import block
 import rsv2
 import typing
-import assetload
 import rsvedit
 import math
 import time
@@ -65,13 +63,13 @@ def setarea(chs: rsvedit.Chunks, area: list[list[rsvedit.Block]], x: int, y: int
 
 class Tool(typing.Protocol):
     def activate(self) -> None:
-        pass
+        return
 
     def event(self, app: "App", event: pygame.event.Event) -> bool: # did this tool consume the event?
         return False
 
     def draw(self, app: "App") -> None:
-        pass
+        return
 
 class WeldTool(Tool):
     def event(self, app: "App", event: pygame.event.Event) -> bool:
@@ -82,7 +80,7 @@ class WeldTool(Tool):
             # 4 scroll up
             # 5 scroll down
             if event.button == 1 or event.button == 3:
-                x,y = spostowpos(event.pos, self.t)
+                x,y = spostowpos(event.pos, app.t)
                 xi,xf = intfrac(x)
                 yi,yf = intfrac(y)
                 xf -= 0.5
@@ -130,10 +128,10 @@ class WeldTool(Tool):
                 return True
         return False
 
-class SelectTool:
-    srect: tuple[int, int, int, int]
+class SelectTool(Tool):
+    srect: tuple[int, int, int, int] | None
 
-    def activate(self):
+    def activate(self) -> None:
         self.srect = None
 
     def event(self, app: "App", event: pygame.event.Event) -> bool:
@@ -148,14 +146,19 @@ class SelectTool:
                 x = math.floor(x)
                 y = math.floor(y)
                 self.srect = (x, y, x, y)
+                return True
         if event.type == pygame.MOUSEMOTION:
             if event.buttons[0]: # left mouse to select
+                if self.srect is None:
+                    return False
                 x,y = spostowpos(event.pos, app.t)
                 x = math.floor(x)
                 y = math.floor(y)
                 self.srect = (min(self.srect[0], x), min(self.srect[1], y), max(self.srect[2], x), max(self.srect[3], y))
-            if event.buttons[1]: # right mouse to cancel
+                return True
+            if event.buttons[2]: # right mouse to cancel
                 self.srect = None
+                return True
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_v: # v
                 if event.mod & pygame.KMOD_CTRL: # + ctrl
@@ -166,12 +169,15 @@ class SelectTool:
             if event.key == pygame.K_w:
                 app.activate(app.weld)
                 app.deactivate(self)
+                return True
             if event.key == pygame.K_c: # copy selected area
                 if event.mod & pygame.KMOD_CTRL:
                     if self.srect is not None:
                         app.clipboard = getarea(chs, self.srect)
+                    return True
+        return False
 
-    def draw(self, app: "App"):
+    def draw(self, app: "App") -> None:
         if self.srect is None:
             return
         sx,sy = spostowpos((0, 0), app.t)
@@ -179,7 +185,9 @@ class SelectTool:
         x2,y2 = self.srect[2] - sx + 1, self.srect[3] - sy + 1
         pygame.draw.rect(app._display_surf, (230, 255, 230), (x1 * 16, y1 * 16, (x2 - x1) * 16, (y2 - y1) * 16), 2)
 
-class PasteTool:
+class PasteTool(Tool):
+    prevtool: Tool
+
     def event(self, app: "App", event: pygame.event.Event) -> bool:
         if event.type == pygame.MOUSEBUTTONDOWN:
             # 1 left
@@ -195,8 +203,10 @@ class PasteTool:
                     setarea(chs, app.clipboard, x, y) # paste the clipboard to the world
                 app.activate(self.prevtool)
                 app.deactivate(self) # go back to the original tool
+                return True
+        return False
 
-    def draw(self, app: "App"):
+    def draw(self, app: "App") -> None:
             blocks = [
                 [
                     typing.cast(block.BlockDataIn,{
@@ -209,25 +219,25 @@ class PasteTool:
                     })
                     for a,b,c,d,e in row
                 ]
-                for row in self.clipboard
+                for row in app.clipboard
             ]
             ims = block.makeimage(blocks,autoweld = False)
             mx,my = pygame.mouse.get_pos()
             for im,x,y in ims:
-                self._display_surf.blit(im, (x + mx, y + my))
+                app._display_surf.blit(im, (x + mx, y + my))
             # halve the alpha too
             ...
 
 class App:
     clock: pygame.time.Clock
     _running: bool
-    _display_surf: pygame.Surface | None
+    _display_surf: pygame.Surface
     size: tuple[int, int]
     width: int
     height: int
     t: tuple[int, int]
     clipboard: list[list[rsvedit.Block]]
-    paste: Tool
+    paste: PasteTool
     weld: Tool
     select: Tool
     tools: list[tuple[bool, Tool]]
@@ -236,7 +246,6 @@ class App:
         # initialize variables
         self.clock = pygame.time.Clock()
         self._running = True
-        self._display_surf = None
         self.size = self.width, self.height = width, height
         self.t = (0, 0)
         self.weld = WeldTool()
@@ -268,10 +277,10 @@ class App:
                 print('Saving!')
                 rsv2.writeall(f, chs)
                 return
-        for active,tool in tools:
+        for active,tool in self.tools:
             if not active:
                 continue
-            if tool.event(app,event): # captured
+            if tool.event(self, event): # captured
                 return
 
     def on_loop(self) -> None:
@@ -308,17 +317,17 @@ class App:
             for im,x,y in ims:
                 self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))
         
-        for active,tool in tools:
+        for active,tool in self.tools:
             if not active:
                 continue
-            tool.draw(app)
+            tool.draw(self)
     
     def on_cleanup(self) -> None:
         # close the pygame window
         pygame.quit()
  
     def on_execute(self) -> None:
-        if self.on_init() == False:
+        if not self.on_init():
             self._running = False
  
         while self._running:
@@ -334,13 +343,13 @@ class App:
         # clean up everything that might mess up something later
         self.on_cleanup()
 
-    def activate(self, tool):
-        for i,(active,t) in self.tools:
+    def activate(self, tool: Tool) -> None:
+        for i,(active,t) in enumerate(self.tools):
             if t is tool:
                 self.tools[i] = True, tool
 
-    def deactivate(self, tool):
-        for i,(active,t) in self.tools:
+    def deactivate(self, tool: Tool) -> None:
+        for i,(active,t) in enumerate(self.tools):
             if t is tool:
                 self.tools[i] = False, tool
 
