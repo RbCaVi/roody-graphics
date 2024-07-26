@@ -210,7 +210,7 @@ class ImageBit:
 		return im
 
 class Image:
-	ims:list[tuple[tuple[float, float], ImageBit]] # centers
+	ims:list[tuple[float, float, ImageBit]] # centers
 
 	def __init__(self) -> None:
 		self.ims=[]
@@ -218,24 +218,24 @@ class Image:
 	def addimagebit(self, im:ImageBit, x:float=0, y:float=0) -> None:
 		x += im.w / 2
 		y += im.h / 2
-		self.ims.append(((x, y), im))
+		self.ims.append((x, y, im))
 
 	def addimage(self, im:typing.Self, x:float=0, y:float=0) -> None:
-		for (ix, iy), oim in im.ims:
-			self.ims.append(((ix + x, iy + y), oim))
+		for ix, iy, oim in im.ims:
+			self.ims.append((ix + x, iy + y, oim))
 
 	def rotate(self, r:int, flip:bool=False, center:tuple[int, int]=(8, 8)) -> None:
 		x, y = center
-		for i, ((ix, iy), im) in enumerate(self.ims):
+		for i, (ix, iy, im) in enumerate(self.ims):
 			im.rotate(r, flip)
 			dx = ix - x
 			dy = iy - y
 			dx, dy = rotatexy(dx, dy, r, flip)
-			self.ims[i]=((x + dx, y + dy), self.ims[i][1])
+			self.ims[i]=(x + dx, y + dy, self.ims[i][2])
 
 	def genimage(self) -> list[tuple[pygame.Surface,int,int]]:
 		out=[]
-		for (x, y), im in self.ims:
+		for x, y, im in self.ims:
 			pim = im.getim()
 			out.append((pim, int(x - pim.get_width() / 2), int(y - pim.get_height() / 2)))
 		return out
