@@ -346,6 +346,7 @@ class App:
     def activate(self, tool: Tool) -> None:
         for i,(active,t) in enumerate(self.tools):
             if t is tool:
+                tool.activate()
                 self.tools[i] = True, tool
 
     def deactivate(self, tool: Tool) -> None:
