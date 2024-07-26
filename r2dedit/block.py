@@ -83,9 +83,8 @@ normalmap_cache: list[None | pygame.Surface] = [None] * 8 * 256
 
 def apply_normalmap(block_id:int, rotation:int, flip:bool) -> pygame.Surface:
 	i = block_id * 8 + rotation * 2 + flip
-	if normalmap_cache[i] is not None:
-		im = normalmap_cache[i]
-	else:
+	im = normalmap_cache[i]
+	if im is None:
 		f = os.path.join('cache/normalmapped',f'nmapped_{block_id}_{rotation}_{flip}.png')
 		try:
 			if pygame.image.get_extended():
