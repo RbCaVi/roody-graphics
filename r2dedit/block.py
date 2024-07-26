@@ -782,38 +782,31 @@ def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int
 			with Timer(0):
 				block=get(newblocks,xi,yi)
 				if block['id']==0: # air
+					# i need to do beams too nooooooooooooooooooo
 					continue
-				blockweld = tuple(block['weld'])
+				blockweldtop,blockweldleft,blockweldbottom,blockweldright = block['weld']
 				if idtoblock[block['id']]=='platform': # special case
 					# check if sides are platform
-					blockweld=(
-						blockweld[0],
-						setplatformside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']]!='platform'),
-						blockweld[2],
-						setplatformside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']]!='platform'),
-					)
+					blockweldleft = setplatformside(blockweldleft,idtoblock[get(newblocks,xi-1,yi)['id']]!='platform')
+					blockweldright = setplatformside(blockweldright,idtoblock[get(newblocks,xi+1,yi)['id']]!='platform')
 				if idtoblock[block['id']] in frametypes: # special case
 					# check if sides are frame base
-					blockweld=(
-						setframeside(blockweld[0],idtoblock[get(newblocks,xi,yi-1)['id']] in frametypes),
-						setframeside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']] in frametypes),
-						setframeside(blockweld[2],idtoblock[get(newblocks,xi,yi+1)['id']] in frametypes),
-						setframeside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']] in frametypes),
-					)
+					blockweldtop = setframeside(blockweldtop,idtoblock[get(newblocks,xi,yi-1)['id']] in frametypes)
+					blockweldleft = setframeside(blockweldleft,idtoblock[get(newblocks,xi-1,yi)['id']] in frametypes)
+					blockweldbottom = setframeside(blockweldbottom,idtoblock[get(newblocks,xi,yi+1)['id']] in frametypes)
+					blockweldright = setframeside(blockweldright,idtoblock[get(newblocks,xi+1,yi)['id']] in frametypes)
 				blocktype=blocktypes[idtoblock[block['id']]]
 				if blocktype['wired']:
 					# check if sides are wired
-					blockweld=(
-						setwireside(blockweld[0],idtoblock[get(newblocks,xi,yi-1)['id']] in wiredtypes),
-						setwireside(blockweld[1],idtoblock[get(newblocks,xi-1,yi)['id']] in wiredtypes),
-						setwireside(blockweld[2],idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes),
-						setwireside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes),
-					)
 			#with Timer(1):
 				#blockweld = tuple(freezeweld(weld) for weld in blockweld)
+					blockweldtop = setwireside(blockweldtop,idtoblock[get(newblocks,xi,yi-1)['id']] in wiredtypes)
+					blockweldleft = setwireside(blockweldleft,idtoblock[get(newblocks,xi-1,yi)['id']] in wiredtypes)
+					blockweldbottom = setwireside(blockweldbottom,idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes)
+					blockweldright = setwireside(blockweldright,idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes)
 			with Timer(2):
 				#block = frozendict.frozendict({**block, 'weld': blockweld})
-				block['weld']=blockweld
+				block['weld']=[blockweldtop, blockweldleft, blockweldbottom, blockweldright]
 			with Timer(3):
 				bim = getblockimage(block)
 			im.addimage(bim,xi*16,yi*16)
