@@ -209,7 +209,7 @@ class PasteTool(Tool):
     def draw(self, app: "App") -> None:
             blocks = [
                 [
-                    typing.cast(block.BlockDataIn,{
+                    typing.cast(block.BlockData,{
                         'id':a,
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
@@ -221,7 +221,7 @@ class PasteTool(Tool):
                 ]
                 for row in app.clipboard
             ]
-            ims = block.makeimage(blocks,autoweld = False)
+            ims = block.makeimage(blocks)
             mx,my = pygame.mouse.get_pos()
             for im,x,y in ims:
                 app._display_surf.blit(im, (x + mx, y + my))
@@ -298,7 +298,7 @@ class App:
         with Timer('mkblks'):
             blocks = [
                 [
-                    typing.cast(block.BlockDataIn,{
+                    typing.cast(block.BlockData,{
                         'id':a,
                         'weld':[
                             block.makeweldside((b >> n & 1) == 1)
@@ -312,7 +312,7 @@ class App:
                 for y in range(syf, syf + math.ceil(self.height / 16) + 1)
             ]
         with Timer('mkimg'):
-            ims = block.makeimage(blocks,autoweld = False)
+            ims = block.makeimage(blocks)
         with Timer('blit'):
             for im,x,y in ims:
                 self._display_surf.blit(im, (x - sxd * 16, y - syd * 16))

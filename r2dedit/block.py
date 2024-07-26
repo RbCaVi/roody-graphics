@@ -766,7 +766,7 @@ air = normalize("air")
 # blocks is a grid of blocks
 # autoweld makes it weld all possible unspecified welds
 # autoweld=False makes welds not autocorrect (for rendering roody structures)
-def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[pygame.Surface,int,int]]:
+def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int]]:
 	xsize=max(map(len,blocks))
 	ysize=len(blocks)
 
