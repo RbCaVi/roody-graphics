@@ -36,7 +36,7 @@ rimlights:dict[int, np.ndarray] = {}
 vec3:typing.TypeAlias = tuple[float, float, float]
 
 def convertim(im: PIL.Image.Image) -> pygame.Surface:
-    return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode))
+    return pygame.image.fromstring(im.tobytes(), im.size, typing.cast(typing.Any,im.mode)).convert_alpha()
 
 def clamp(a:np.ndarray) -> np.ndarray:
 	return np.fmin(np.fmax(a, 0.0), 1.0) # overflow error
