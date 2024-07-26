@@ -77,55 +77,72 @@ def calc_highlights(lightdir:vec3, normal:np.ndarray, rimlight:np.ndarray) -> np
 
 fullbright_lightdir = (-0.5, 1.0, 1.0)
 
-@functools.cache
+os.makedirs('cache/normalmapped', exist_ok = True)
+
+normalmap_cache: list[None | pygame.Surface] = [None] * 8 * 256
+
 def apply_normalmap(block_id:int, rotation:int, flip:bool) -> pygame.Surface:
-	# rotate the light so when the block is rotated back the light is in the right direction
-	lightdir:vec3 = quarter_rotate(fullbright_lightdir, rotation);
-
-	light:np.ndarray
-
-	normal_array:np.ndarray
-
-	albedo = getalbedo(block_id)
-	normal = getnormal(block_id)
-
-	if normal is None:
-		s0,s1 = albedo.size
-		normal_array = np.full((s1,s0,3),(0,0,1))
+	i = block_id * 8 + rotation * 2 + flip
+	if normalmap_cache[i] is not None:
+		im = normalmap_cache[i]
 	else:
-		normal_array = np.asarray(normal) / 255 * 2 - 1
-		normal_array = normal_array / np.atleast_3d(np.linalg.norm(normal_array, axis = 2))
-		normal_array = normal_array[:, :, :3]
-		# shape (any, any, 3)
+		f = os.path.join('cache/normalmapped',f'nmapped_{block_id}_{rotation}_{flip}.png')
+		try:
+			if pygame.image.get_extended():
+				im = pygame.image.load(f)
+			else:
+				im = convertim(PIL.Image.open(f))
+		except FileNotFoundError:
+			# rotate the light so when the block is rotated back the light is in the right direction
+			lightdir:vec3 = quarter_rotate(fullbright_lightdir, rotation);
 
-	if flip: # flip_uv_x
-		normal_array[:, :, 0] = -normal_array[:, :, 0]
+			light:np.ndarray
 
-	normal_array[:, :, 1] = -normal_array[:, :, 1]
+			normal_array:np.ndarray
 
-	light = calc_diffuse_ambient_light(lightdir, normal_array)
-	light = np.array([light, light, light])
-	light = np.moveaxis(light, 0, 2)
-	light = clamp(light)
-	light = light * 255
-	light = light.astype('uint8')
-	lightim:PIL.Image.Image = PIL.Image.fromarray(light)
+			albedo = getalbedo(block_id)
+			normal = getnormal(block_id)
 
-	alpha:PIL.Image.Image = albedo.getchannel('A')
-	color:PIL.Image.Image = albedo.convert('RGB')
-	diffused:PIL.Image.Image = PIL.ImageChops.multiply(color, lightim)
-	out:PIL.Image.Image = diffused
+			if normal is None:
+				s0,s1 = albedo.size
+				normal_array = np.full((s1,s0,3),(0,0,1))
+			else:
+				normal_array = np.asarray(normal) / 255 * 2 - 1
+				normal_array = normal_array / np.atleast_3d(np.linalg.norm(normal_array, axis = 2))
+				normal_array = normal_array[:, :, :3]
+				# shape (any, any, 3)
 
-	if block_id in rimlights:
-		highlights:np.ndarray = calc_highlights(lightdir, normal_array, rimlights[block_id]);
-		highlights = clamp(highlights)
-		highlights = highlights.astype('uint8')
-		highlightsim:PIL.Image.Image = PIL.Image.fromarray(highlights)
-		out = PIL.ImageChops.add(out,highlightsim)
-	
-	out.putalpha(alpha)
+			if flip: # flip_uv_x
+				normal_array[:, :, 0] = -normal_array[:, :, 0]
 
-	return convertim(out)
+			normal_array[:, :, 1] = -normal_array[:, :, 1]
+
+			light = calc_diffuse_ambient_light(lightdir, normal_array)
+			light = np.array([light, light, light])
+			light = np.moveaxis(light, 0, 2)
+			light = clamp(light)
+			light = light * 255
+			light = light.astype('uint8')
+			lightim:PIL.Image.Image = PIL.Image.fromarray(light)
+
+			alpha:PIL.Image.Image = albedo.getchannel('A')
+			color:PIL.Image.Image = albedo.convert('RGB')
+			diffused:PIL.Image.Image = PIL.ImageChops.multiply(color, lightim)
+			out:PIL.Image.Image = diffused
+
+			if block_id in rimlights:
+				highlights:np.ndarray = calc_highlights(lightdir, normal_array, rimlights[block_id]);
+				highlights = clamp(highlights)
+				highlights = highlights.astype('uint8')
+				highlightsim:PIL.Image.Image = PIL.Image.fromarray(highlights)
+				out = PIL.ImageChops.add(out,highlightsim)
+			
+			out.putalpha(alpha)
+
+			im = convertim(out)
+			pygame.image.save(im, f)
+		normalmap_cache[i] = im
+	return im
 
 #welded=top,left,bottom,right
 #rotate= 0    1    2      3
