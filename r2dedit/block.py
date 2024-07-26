@@ -744,6 +744,8 @@ def getblockimage(block: BlockData) -> Image:
 #def freezeweld(weld):
 #	return frozendict.frozendict(weld)
 
+air = normalize("air")
+
 # the main method
 # blocks is a grid of blocks
 # autoweld makes it weld all possible unspecified welds
@@ -752,11 +754,11 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 	xsize=max(map(len,blocks))
 	ysize=len(blocks)
 
-	newblocks=[[normalize("air") for _ in range(xsize)] for _ in range(ysize)]
+	newblocks=[[air for _ in range(xsize)] for _ in range(ysize)]
 	for yi,line in enumerate(blocks):
 		for xi,blockin in enumerate(line):
-			block=normalize(blockin)
-			newblocks[yi][xi]=block
+			#block=normalize(blockin)
+			newblocks[yi][xi]=blockin
 
 	im=Image()
 	for xi in range(xsize):
@@ -802,8 +804,8 @@ def makeimage(blocks:list[list[BlockDataIn]],autoweld:bool=True) -> list[tuple[p
 						setwireside(blockweld[2],idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes),
 						setwireside(blockweld[3],idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes),
 					)
-			with Timer(1):
-				blockweld = tuple(freezeweld(weld) for weld in blockweld)
+			#with Timer(1):
+				#blockweld = tuple(freezeweld(weld) for weld in blockweld)
 			with Timer(2):
 				#block = frozendict.frozendict({**block, 'weld': blockweld})
 				block['weld']=blockweld
