@@ -739,14 +739,6 @@ def get(vss:list[list[BlockData]],xi:int,yi:int) -> BlockData:
 		return normalize("air");
 	return vs[xi]
 
-# can this block weld on this side?
-def canweld(side:str,block:BlockData) -> bool:
-	sides = blockinfos[idtoblock[block['id']]]['weldablesides']
-	i={'top':0,'bottom':2,'left':1,'right':3}[side]+4-block['rotate']
-	i=i%4
-	return sides[i] and iswelded(block['weld'][{'top':0,'bottom':2,'left':1,'right':3}[side]])
-
-#@functools.cache
 def getblockimage(block: BlockData) -> Image:
 	blocktype=blocktypes[idtoblock[block['id']]]
 	im=Image()
@@ -756,9 +748,6 @@ def getblockimage(block: BlockData) -> Image:
 	for layer in blocktype['layers']:
 		im.addimage(layer(block),0,0) # paste the block
 	return im
-
-#def freezeweld(weld):
-#	return frozendict.frozendict(weld)
 
 air = normalize("air")
 
@@ -798,14 +787,11 @@ def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int
 				blocktype=blocktypes[idtoblock[block['id']]]
 				if blocktype['wired']:
 					# check if sides are wired
-			#with Timer(1):
-				#blockweld = tuple(freezeweld(weld) for weld in blockweld)
 					blockweldtop = setwireside(blockweldtop,idtoblock[get(newblocks,xi,yi-1)['id']] in wiredtypes)
 					blockweldleft = setwireside(blockweldleft,idtoblock[get(newblocks,xi-1,yi)['id']] in wiredtypes)
 					blockweldbottom = setwireside(blockweldbottom,idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes)
 					blockweldright = setwireside(blockweldright,idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes)
 			with Timer(2):
-				#block = frozendict.frozendict({**block, 'weld': blockweld})
 				block['weld']=[blockweldtop, blockweldleft, blockweldbottom, blockweldright]
 			with Timer(3):
 				bim = getblockimage(block)
