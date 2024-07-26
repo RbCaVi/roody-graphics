@@ -784,17 +784,6 @@ def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int
 				if block['id']==0: # air
 					continue
 				blockweld = tuple(block['weld'])
-				if autoweld:
-					weldright=canweld('right',block) and canweld('left',get(newblocks,xi+1,yi))
-					weldleft=canweld('left',block) and canweld('right',get(newblocks,xi-1,yi))
-					weldbottom=canweld('bottom',block) and canweld('top',get(newblocks,xi,yi+1))
-					weldtop=canweld('top',block) and canweld('bottom',get(newblocks,xi,yi-1))
-					blockweld=(
-						makeweldside(blockweld[0] and weldtop),
-						makeweldside(blockweld[1] and weldleft),
-						makeweldside(blockweld[2] and weldbottom),
-						makeweldside(blockweld[3] and weldright),
-					)
 				if idtoblock[block['id']]=='platform': # special case
 					# check if sides are platform
 					blockweld=(
