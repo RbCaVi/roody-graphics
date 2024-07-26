@@ -792,7 +792,7 @@ def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int
 					blockweldbottom = setwireside(blockweldbottom,idtoblock[get(newblocks,xi,yi+1)['id']] in wiredtypes)
 					blockweldright = setwireside(blockweldright,idtoblock[get(newblocks,xi+1,yi)['id']] in wiredtypes)
 			with Timer(2):
-				block['weld']=[blockweldtop, blockweldleft, blockweldbottom, blockweldright]
+				block['weld']=(blockweldtop, blockweldleft, blockweldbottom, blockweldright)
 			with Timer(3):
 				bim = getblockimage(block)
 			im.addimage(bim,xi*16,yi*16)
