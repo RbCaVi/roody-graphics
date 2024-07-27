@@ -156,88 +156,80 @@ WeldSides: typing.TypeAlias = tuple[WeldSide,WeldSide,WeldSide,WeldSide]
 WeldSideIn: typing.TypeAlias = WeldSide | bool
 WeldSidesIn: typing.TypeAlias = tuple[WeldSideIn,WeldSideIn,WeldSideIn,WeldSideIn]
 
-class ImageBit:
-	x:int
-	y:int
-	w:int
-	h:int
-	flip:bool
-	rotation:int
-	block_id:int
+ImageBit: typing.TypeAlias = tuple[int,int,int,int,bool,int,int]
 
-	def __init__(self,block:int | typing.Self,x:int=0,y:int=0,w:int=16,h:int=16) -> None:
-		# the dimensions of the part of the image to use
-		self.x = x
-		self.y = y
-		self.w = w
-		self.h = h
-		if isinstance(block,ImageBit):
-			# gonna just assume x,y,w,h stays inside the image
-			self.x += block.x
-			self.y += block.y
-			block = block.block_id
-		self.block_id = block
-		# rotation
-		self.flip = False # first
-		self.rotation = 0 # second
+def imagebit(block:int | ImageBit,x:int=0,y:int=0,w:int=16,h:int=16) -> ImageBit:
+	# the dimensions of the part of the image to use
+	if isinstance(block,tuple):
+		# gonna just assume x,y,w,h stays inside the image
+		x += block[0]
+		y += block[1]
+		block = block[6]
+	block_id = block
+	# rotation
+	flip = False # first
+	rotation = 0 # second
+	return (x, y, w, h, flip, rotation, block_id)
 
-	def rotate(self,r:int,flip:bool=False) -> None:
-		if flip:
-			self.rotation = -self.rotation % 4
-			self.flip = not self.flip
-		self.rotation += r
+def rotateib(ib:ImageBit, r:int, flip:bool=False) -> ImageBit:
+	x,y,w,h,flip,rotation,block_id = ib
+	if flip:
+		rotation = -rotation % 4
+		flip = not flip
+	rotation += r
+	return (x, y, w, h, flip, rotation, block_id)
 
-	def getim(self) -> pygame.Surface:
-		im = apply_normalmap(self.block_id, self.rotation, self.flip)
-		try:
-			im = im.subsurface((self.x, self.y, self.w, self.h))
-		except:
-			print(self.block_id, self.rotation, self.flip, self.x, self.y, self.w, self.h)
-			raise
-		# i have to calculate the diffuse and "rimlight"
-		# self.flip = flip_uv_x
-		# self.rotate = either rotation or (3 - rotation)
-		if self.flip:
-			im = pygame.transform.flip(im, True, False)
-		match self.rotation:
-			case 1:
-				im = pygame.transform.rotate(im,270)
-			case 2:
-				im = pygame.transform.rotate(im,180)
-			case 3:
-				im = pygame.transform.rotate(im,90)
-		return im
+def getim(ib:ImageBit) -> pygame.Surface:
+	x,y,w,h,flip,rotation,block_id = ib
+	im = apply_normalmap(block_id, rotation, flip)
+	try:
+		im = im.subsurface((x, y, w, h))
+	except:
+		print(block_id, rotation, flip, x, y, w, h)
+		raise
+	# i have to calculate the diffuse and "rimlight"
+	# self.flip = flip_uv_x
+	# self.rotate = either rotation or (3 - rotation)
+	if flip:
+		im = pygame.transform.flip(im, True, False)
+	match rotation:
+		case 1:
+			im = pygame.transform.rotate(im,270)
+		case 2:
+			im = pygame.transform.rotate(im,180)
+		case 3:
+			im = pygame.transform.rotate(im,90)
+	return im
 
-class Image:
-	ims:list[tuple[float, float, ImageBit]] # centers
+Image: typing.TypeAlias = list[tuple[float, float, ImageBit]]
 
-	def __init__(self) -> None:
-		self.ims=[]
+def newimage() -> Image:
+	return []
 
-	def addimagebit(self, im:ImageBit, x:float=0, y:float=0) -> None:
-		x += im.w / 2
-		y += im.h / 2
-		self.ims.append((x, y, im))
+def addimagebit(ims: Image, im:ImageBit, x:float=0, y:float=0) -> None:
+	x += im[2] / 2
+	y += im[3] / 2
+	ims.append((x, y, im))
 
-	def addimage(self, im:typing.Self, x:float=0, y:float=0) -> None:
-		for ix, iy, oim in im.ims:
-			self.ims.append((ix + x, iy + y, oim))
+def addimage(ims: Image, im: Image, x:float=0, y:float=0) -> None:
+	for ix, iy, oim in im:
+		ims.append((ix + x, iy + y, oim))
 
-	def rotate(self, r:int, flip:bool=False, center:tuple[int, int]=(8, 8)) -> None:
-		x, y = center
-		for i, (ix, iy, im) in enumerate(self.ims):
-			im.rotate(r, flip)
-			dx = ix - x
-			dy = iy - y
-			dx, dy = rotatexy(dx, dy, r, flip)
-			self.ims[i]=(x + dx, y + dy, self.ims[i][2])
+def rotateim(ims: Image, r:int, flip:bool=False, center:tuple[int, int]=(8, 8)) -> None:
+	x, y = center
+	for i, (ix, iy, im) in enumerate(ims):
+		im = rotateib(im, r, flip)
+		dx = ix - x
+		dy = iy - y
+		dx, dy = rotatexy(dx, dy, r, flip)
+		ims[i]=(x + dx, y + dy, im)
 
-	def genimage(self) -> list[tuple[pygame.Surface,int,int]]:
-		out=[]
-		for x, y, im in self.ims:
-			pim = im.getim()
-			out.append((pim, int(x - pim.get_width() / 2), int(y - pim.get_height() / 2)))
-		return out
+def genimage(ims: Image) -> list[tuple[pygame.Surface,int,int]]:
+	out=[]
+	for x, y, im in ims:
+		pim = getim(im)
+		out.append((pim, int(x - pim.get_width() / 2), int(y - pim.get_height() / 2)))
+	return out
 
 class BlockDataLoose(typing.TypedDict):
 	id:int
@@ -407,7 +399,7 @@ def twowayfilter(data:BlockData) -> BlockData:
 
 @functools.cache
 def _getblocktexture(block_id:int,offsetx:int,offsety:int,sizex:int,sizey:int) -> ImageBit:
-	return ImageBit(block_id,offsetx,offsety,offsetx+sizex,offsety+sizey)
+	return imagebit(block_id,offsetx,offsety,offsetx+sizex,offsety+sizey)
 
 def getblocktexture(data:BlockDataLoose) -> ImageBit:
 	blockid=data['id']
@@ -419,10 +411,10 @@ def getblocktexture(data:BlockDataLoose) -> ImageBit:
 
 def drawblocktexture(image:ImageBit,weld:WeldSides) -> Image:
 	top,left,bottom,right=weld
-	im = Image()
+	im = newimage()
 	for x,xside in [(0,left),(8,right)]:
 		for y,yside in [(0,top),(8,bottom)]:
-			im.addimagebit(ImageBit(image,x+16*iswelded(xside),y+16*iswelded(yside),8,8),x,y)
+			addimagebit(im, imagebit(image,x+16*iswelded(xside),y+16*iswelded(yside),8,8),x,y)
 	return im
 
 def defaultblock(data:BlockData) -> Image:
@@ -443,8 +435,8 @@ def overlay(data:BlockData) -> Image:
 		'sizex':16,
 		'sizey':16,
 	})
-	im2 = Image()
-	im2.addimagebit(ImageBit(im,0,0,16,16),0,0)
+	im2 = newimage()
+	addimagebit(im2, imagebit(im,0,0,16,16),0,0)
 	im2=rotateoverlayib(im2,rotate)
 	return im2
 
@@ -457,8 +449,8 @@ def overlay2(data:BlockData) -> Image:
 		'sizex':16,
 		'sizey':16,
 	})
-	im2 = Image()
-	im2.addimagebit(ImageBit(im,0,0,16,16),0,0)
+	im2 = newimage()
+	addimagebit(im2, imagebit(im,0,0,16,16),0,0)
 	return im2
 
 def wafer(data:BlockData) -> Image:
@@ -469,14 +461,14 @@ def frame(data:BlockData) -> Image:
 	rotate=data['rotate']
 	image=getblocktexture({'id':blockinfos['frame']['id'],'sizex':64})
 	top,left,bottom,right=rotatewelded(welded,rotate)
-	im = Image()
+	im = newimage()
 	for x,xside in [(0,left),(8,right)]:
 		for y,yside in [(0,top),(8,bottom)]:
 			if isframe(xside) or isframe(yside):
 				offset=32 # frames have different welding to each other
 			else:
 				offset=0
-			im.addimagebit(ImageBit(image,x+offset+16*iswelded(xside),y+16*iswelded(yside),8,8),x,y)
+			addimagebit(im, imagebit(image,x+offset+16*iswelded(xside),y+16*iswelded(yside),8,8),x,y)
 	im=rotateblockib(im,rotate)
 	return im
 
@@ -499,10 +491,10 @@ def wire(data:BlockData) -> Image:
 		offset=0
 	image=getblocktexture({'id':blockinfos['wire']['id'],'offsetx':offset})
 	top,left,bottom,right=welded
-	im = Image()
+	im = newimage()
 	for x,xside in [(0,left),(8,right)]:
 		for y,yside in [(0,top),(8,bottom)]:
-			im.addimagebit(ImageBit(image,x+16*iswired(xside),y+16*iswired(yside),8,8),x,y)
+			addimagebit(im, imagebit(image,x+16*iswired(xside),y+16*iswired(yside),8,8),x,y)
 	return im
 
 def actuator(data:BlockData) -> Image:
@@ -514,8 +506,8 @@ def actuator(data:BlockData) -> Image:
 	im1 = defaultblock({**data,'id':blockinfos['actuator_base']['id'],'weld':weld1,'rotate':0})
 	im2 = defaultblock({**data,'id':blockinfos['actuator_head']['id'],'weld':weld2,'rotate':0})
 	im = Image()
-	im.addimage(im1,0,0)
-	im.addimage(im2,0,0)
+	addimage(im, im1,0,0)
+	addimage(im, im2,0,0)
 	im=rotateblockib(im,rotate)
 	return im
 
@@ -525,9 +517,9 @@ def platform(data:BlockData) -> Image:
 	y=0
 	if left==0 and right==1 or left==1 and right==0 or left==0 and right==0:
 		y=16
-	im = Image()
+	im = newimage()
 	for x,xside in [(0,left),(8,right)]:
-		im.addimagebit(ImageBit(image,x+16*platformx(xside),y,8,16),x,y)
+		addimagebit(im, imagebit(image,x+16*platformx(xside),y,8,16),x,y)
 	return im
 
 def wirecomponent(data:BlockData) -> BlockData:
@@ -658,11 +650,11 @@ def rotateblockib(im:Image,rotate:int) -> Image:
 	if rotate==0:
 		pass
 	if rotate==3:
-		im.rotate(1)
+		rotateim(im, 1)
 	if rotate==1:
-		im.rotate(3,True)
+		rotateim(im, 3, True)
 	if rotate==2:
-		im.rotate(2,True)
+		rotateim(im, 2, True)
 	return im
 
 # rotate an overlay (like galvanometer) by rotate
@@ -670,11 +662,11 @@ def rotateoverlayib(im:Image,rotate:int) -> Image:
 	if rotate==0:
 		pass
 	if rotate==3:
-		im.rotate(1)
+		rotateim(im, 1)
 	if rotate==1:
-		im.rotate(3)
+		rotateim(im, 3)
 	if rotate==2:
-		im.rotate(2)
+		rotateim(im, 2)
 	return im
 
 # rotate the welds so they are in the right place when rotated by rotateblock
@@ -746,7 +738,7 @@ def getblockimage(block: BlockData) -> Image:
 		block=datafilter(block)
 	layers: list[Image] = []
 	for layer in blocktype['layers']:
-		im.addimage(layer(block),0,0) # paste the block
+		addimage(im, layer(block),0,0) # paste the block
 	return im
 
 air = normalize("air")
@@ -795,5 +787,5 @@ def makeimage(blocks:list[list[BlockData]]) -> list[tuple[pygame.Surface,int,int
 				block['weld']=(blockweldtop, blockweldleft, blockweldbottom, blockweldright)
 			with Timer(3):
 				bim = getblockimage(block)
-			im.addimage(bim,xi*16,yi*16)
-	return im.genimage()
+			addimage(im, bim,xi*16,yi*16)
+	return genimage(im)
