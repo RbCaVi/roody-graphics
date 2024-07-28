@@ -285,17 +285,31 @@ class WindowTool(Tool):
     def windowdraw(self, app: "App") -> None:
         return
 
+pygame.font.init()
+font = pygame.font.SysFont('dejavusansmono', 12)
+
 def subpos(base: tuple[int, int], pos: tuple[int, int]) -> tuple[int, int]:
     return pos[0] - base[0], pos[1] - base[1]
 
+def addpos(base: tuple[int, int], pos: tuple[int, int]) -> tuple[int, int]:
+    return pos[0] + base[0], pos[1] + base[1]
+
 class BlockWindowTool(WindowTool):
+    bp: tuple[int, int] | None
+
+    def __init__(self):
+        super(BlockWindowTool, self).__init__(120, 100)
+
+    def activate(self):
+        self.bp = None
+
     def outevent(self, app: "App", event: pygame.event.Event) -> bool:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_x:
                 x,y = spostowpos(pygame.mouse.get_pos(), app.t)
                 xi,xf = intfrac(x)
                 yi,yf = intfrac(y)
-                print(rsvedit.getblock(chs, xi, yi))
+                self.bp = xi, yi
                 return True
         return False
 
@@ -303,7 +317,15 @@ class BlockWindowTool(WindowTool):
         return False
 
     def windowdraw(self, app: "App") -> None:
-        return
+        if self.bp is not None:
+            block = rsvedit.getblock(chs, self.bp[0], self.bp[1])
+            for i,byte in enumerate(block):
+                h = font.render(hex(byte+256)[3:], True, (0, 0, 0))
+                b = font.render(bin(byte+256)[3:], True, (0, 0, 0))
+                d = font.render(str(byte), True, (0, 0, 0))
+                app._display_surf.blit(h, addpos((self.rect.x, self.rect.y), (10, 10 + 14 * i)))
+                app._display_surf.blit(b, addpos((self.rect.x, self.rect.y), (30, 10 + 14 * i)))
+                app._display_surf.blit(d, addpos((self.rect.x, self.rect.y), (90, 10 + 14 * i)))
 
 class App:
     clock: pygame.time.Clock
