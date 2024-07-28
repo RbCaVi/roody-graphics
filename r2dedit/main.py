@@ -272,7 +272,8 @@ class WindowTool(Tool):
         return False
 
     def draw(self, app: "App") -> None:
-        pygame.draw.rect(app._display_surf, (255, 0, 0), self.rect)
+        pygame.draw.rect(app._display_surf, (255, 255, 255), self.rect)
+        pygame.draw.rect(app._display_surf, (0, 0, 0), self.rect, 1)
         self.windowdraw(app)
 
     def outevent(self, app: "App", event: pygame.event.Event) -> bool: # an event not inside the bounds of the window
