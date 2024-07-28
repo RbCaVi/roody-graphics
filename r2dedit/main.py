@@ -265,14 +265,18 @@ class WindowTool(Tool):
                 self.windowevent(app, event)
                 return True
         if self.rect.collidepoint(pygame.mouse.get_pos()):
-            if self.windowevent(app, event): # the contents of this window captured the event
-                return True
+            self.windowevent(app, event)
+            return True
+        if self.outevent(app, event):
             return True
         return False
 
     def draw(self, app: "App") -> None:
         pygame.draw.rect(app._display_surf, (255, 0, 0), self.rect)
         self.windowdraw(app)
+
+    def outevent(self, app: "App", event: pygame.event.Event) -> bool: # an event not inside the bounds of the window
+        return False
 
     def windowevent(self, app: "App", event: pygame.event.Event) -> bool:
         return False
