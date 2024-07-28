@@ -351,8 +351,10 @@ class App:
         self.weld = WeldTool()
         self.select = SelectTool()
         self.paste = PasteTool()
-        self.window = BlockWindowTool(50, 50)
-        self.tools = [(True, self.window), (True, self.weld), (False, self.select), (False, self.paste)]
+        self.window = BlockWindowTool()
+        self.tools = [(False, self.window), (False, self.weld), (False, self.select), (False, self.paste)]
+        self.activate(self.window)
+        self.activate(self.weld)
         self.clipboard = []
  
     def on_init(self) -> bool:
