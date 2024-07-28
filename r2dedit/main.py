@@ -295,7 +295,7 @@ class BlockWindowTool(WindowTool):
                 xi,xf = intfrac(x)
                 yi,yf = intfrac(y)
                 print(rsvedit.getblock(chs, xi, yi))
-            return True
+                return True
         return False
 
     def windowevent(self, app: "App", event: pygame.event.Event) -> bool:
