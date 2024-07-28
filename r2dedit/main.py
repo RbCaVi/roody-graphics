@@ -228,6 +228,58 @@ class PasteTool(Tool):
             # halve the alpha too
             ...
 
+class WindowTool(Tool):
+    rect: pygame.Rect
+    capture: bool
+    capturedrag: bool
+
+    def __init__(self, w, h):
+        self.rect = pygame.Rect(0, 0, w, h)
+        self.capture = False
+        self.capturedrag = False
+
+    def event(self, app: "App", event: pygame.event.Event) -> bool:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.capture = True # other tools can't be used while this one is being used
+                if self.windowevent(app, event): # the contents of this window captured the event
+                    return True
+                if event.button == 1: # start drag (only if something inside the window didn't already capture the event)
+                    self.capturedrag = True
+                return True
+        if event.type == pygame.MOUSEBUTTONUP:
+            if self.capture:
+                self.windowevent(app, event)
+                if event.button == 1:
+                    self.capture = False
+                    self.capturedrag = False
+                return True
+            else:
+                return False
+        if event.type == pygame.MOUSEMOTION:
+            if self.capturedrag:
+                self.rect.move_ip(event.rel)
+                self.rect.clamp_ip(app._display_surf.get_rect())
+                return True
+            if self.capture:
+                self.windowevent(app, event)
+                return True
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if self.windowevent(app, event): # the contents of this window captured the event
+                return True
+            return True
+        return False
+
+    def draw(self, app: "App") -> None:
+        pygame.draw.rect(app._display_surf, (255, 0, 0), self.rect)
+        self.windowdraw(app)
+
+    def windowevent(self, app: "App", event: pygame.event.Event) -> bool:
+        return False
+
+    def windowdraw(self, app: "App") -> None:
+        return
+
 class App:
     clock: pygame.time.Clock
     _running: bool
@@ -240,6 +292,7 @@ class App:
     paste: PasteTool
     weld: Tool
     select: Tool
+    window: Tool
     tools: list[tuple[bool, Tool]]
 
     def __init__(self, width: int, height: int) -> None:
@@ -251,7 +304,8 @@ class App:
         self.weld = WeldTool()
         self.select = SelectTool()
         self.paste = PasteTool()
-        self.tools = [(True, self.weld), (False, self.select), (False, self.paste)]
+        self.window = WindowTool(50, 50)
+        self.tools = [(True, self.window), (True, self.weld), (False, self.select), (False, self.paste)]
         self.clipboard = []
  
     def on_init(self) -> bool:
