@@ -278,6 +278,26 @@ class WindowTool(Tool):
     def outevent(self, app: "App", event: pygame.event.Event) -> bool: # an event not inside the bounds of the window
         return False
 
+    def windowevent(self, app: "App", event: pygame.event.Event) -> bool: # an event inside the bounds of the window
+        return False
+
+    def windowdraw(self, app: "App") -> None:
+        return
+
+def subpos(base: tuple[int, int], pos: tuple[int, int]) -> tuple[int, int]:
+    return pos[0] - base[0], pos[1] - base[1]
+
+class BlockWindowTool(WindowTool):
+    def outevent(self, app: "App", event: pygame.event.Event) -> bool:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_x:
+                x,y = spostowpos(pygame.mouse.get_pos(), app.t)
+                xi,xf = intfrac(x)
+                yi,yf = intfrac(y)
+                print(rsvedit.getblock(chs, xi, yi))
+            return True
+        return False
+
     def windowevent(self, app: "App", event: pygame.event.Event) -> bool:
         return False
 
@@ -308,7 +328,7 @@ class App:
         self.weld = WeldTool()
         self.select = SelectTool()
         self.paste = PasteTool()
-        self.window = WindowTool(50, 50)
+        self.window = BlockWindowTool(50, 50)
         self.tools = [(True, self.window), (True, self.weld), (False, self.select), (False, self.paste)]
         self.clipboard = []
  
