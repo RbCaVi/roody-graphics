@@ -29,6 +29,7 @@ def parseexpr(expr: str) -> typing.Any:
 	nexttype = 'val'
 
 	while True:
+		print(tree)
 		if s.strip() == '':
 			break
 		s,token,nexttype = parsetoken(nexttype, s)
@@ -39,12 +40,15 @@ def parseexpr(expr: str) -> typing.Any:
 		if tokentype == 'op':
 			addoptotree(bottom, token)
 			bottom = token
+		if tokentype == 'paren':
+		  addparentotree(bottom, token)
+		  bottom = token
 	return tree
 
 def parsetoken(typ, s: str):
 	s = s.strip()
 	if typ == 'val':
-		opmatch = re.match('[+-]', s)
+		opmatch = re.match('[(+-]', s)
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 1]), 'val'
@@ -58,12 +62,17 @@ def parsetoken(typ, s: str):
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 2]), 'val'
+		parenmatch = re.match('[)]', s)
+		if parenmatch is not None:
+			paren = parenmatch[0]
+			return s[len(paren):], TreeNode(None, [], ('paren', paren)), 'op'
 		raise ValueError('no match')
 	raise ValueError('no match')
 
 # high number = bind loose
 precedence = {
 	('_', 1): 200,
+	('(', 1): 100,
 	('+', 2): 20,
 	('-', 2): 20,
 	('*', 2): 10,
@@ -72,9 +81,15 @@ precedence = {
 	('-', 1): 5,
 }
 
+insertprecedence = {
+  **precedence,
+  ('(', 1): 5,
+}
+
 prefixness = {
 	('+', 1): True,
 	('-', 1): True,
+	('(', 1): True,
 	('+', 2): False,
 	('-', 2): False,
 	('*', 2): False,
@@ -93,7 +108,9 @@ def goesabove(op, highop) -> bool:
 	opkey = opname, arity
 	_,highopname,higharity = highop.data
 	highopkey = highopname, higharity
-	if precedence[opkey] > precedence[highopkey]:
+	if highopkey not in precedence:
+	  return True
+	if insertprecedence[opkey] > precedence[highopkey]:
 		return True
 	return False
 
@@ -114,3 +131,41 @@ def addoptotree(bottom, op) -> None:
 		op.children.append(lastchild)
 	else:
 		other.children.append(op)
+
+parens = {
+  ('(', 1): ')'
+}
+
+def unmatched(paren, match):
+	if match.data[0] == 'val':
+		return True
+	_,parenname = paren.data
+	parenkey = parenname
+	_,matchname,matcharity = match.data
+	matchkey = matchname, matcharity
+	if matchkey not in parens:
+	  return True
+	if parens[matchkey] == parenkey:
+		return False
+	return True
+
+parenmatches = {
+	(('(', 1), ')'): ('op', '()', 1)
+}
+
+def closeparen(paren, match):
+	_,parenname = paren.data
+	parenkey = parenname
+	_,matchname,matcharity = match.data
+	matchkey = matchname, matcharity
+	return parenmatches[(matchkey, parenkey)]
+
+def addparentotree(bottom, paren) -> None:
+	other = bottom
+	while unmatched(paren, other):
+		other = other.parent
+	paren.parent = other.parent
+	i = paren.parent.children.index(other)
+	paren.parent.children[i] = paren
+	paren.children = other.children
+	paren.data = closeparen(paren, other)
