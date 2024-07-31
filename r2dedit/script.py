@@ -29,12 +29,12 @@ def parseexpr(expr: str) -> typing.Any:
 	nexttypes = ('val',)
 
 	while True:
-		print(s)
-		print(nexttypes)
-		print(tree)
+		#print(s)
+		#print(nexttypes)
+		#print(tree)
 		if s.strip() == '':
 			break
-		print()
+		#print()
 		snext,token,nexttypes = parsetoken(nexttypes, s)
 		tokentype = token.data[0]
 		if tokentype == 'val':
