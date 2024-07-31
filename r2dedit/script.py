@@ -35,7 +35,7 @@ def parseexpr(expr: str) -> typing.Any:
 		if s.strip() == '':
 			break
 		print()
-		s,token,nexttypes = parsetoken(nexttypes, s)
+		snext,token,nexttypes = parsetoken(nexttypes, s)
 		tokentype = token.data[0]
 		if tokentype == 'val':
 			addvaltotree(bottom, token)
@@ -44,12 +44,16 @@ def parseexpr(expr: str) -> typing.Any:
 			addoptotree(bottom, token)
 			bottom = token
 		if tokentype == 'paren':
-			addparentotree(bottom, token)
+			try:
+				addparentotree(bottom, token)
+			except:
+				break
 			bottom = token
 		if tokentype == 'comma':
 			addoptotree(bottom, token)
 			bottom = token
-	return tree
+		s = snext
+	return tree, s
 
 def parsetoken(types, s: str):
 	s = s.strip()
@@ -209,3 +213,61 @@ def addparentotree(bottom, paren) -> None:
 	paren.parent.children[i] = paren
 	paren.children = other.children
 	paren.data = closeparen(paren, other)
+
+def parseidx(s):
+	return chain(
+		pstr('['),
+		parseexpr,
+		pstr(']'),
+	)(s)
+
+def parseset(line):
+	return chain(
+		parsesym,
+		many(parseidx),
+		pstr('='),
+		parseexpr,
+	)(line)
+
+def chain(*ps):
+	def parsechain(s):
+		sp = s
+		out = []
+		for p in ps:
+			t,sp = p(sp)
+			if t is None:
+				return None, s
+			out.append(t)
+		return out, sp
+	return parsechain
+
+def many(p):
+	def parsemany(s):
+		sp = s
+		out = []
+		while True:
+			t,sp = p(sp)
+			if t is None:
+				return out, sp
+			out.append(t)
+	return parsemany
+
+def pstr(pat):
+	def parsestr(s):
+		sp = s.strip()
+		if sp.startswith(pat):
+			return pat, sp[len(pat):]
+		return None, s
+	return parsestr
+
+def regex(reg):
+	def parseregex(s):
+		sp = s.strip()
+		match = re.match(reg, sp)
+		if match is not None:
+			return match[0], sp[len(match[0]):]
+		return None, s
+	return parseregex
+
+def parsesym(s):
+	return regex('[a-zA-Z_][a-zA-Z_0-9]*')(s)
