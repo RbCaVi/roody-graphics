@@ -71,6 +71,10 @@ def parsetoken(types, s: str):
 		if commamatch is not None:
 			comma = commamatch[0]
 			return s[len(comma):], TreeNode(None, [], ['comma', comma, 2]), ('val', 'cparen')
+		opparenmatch = re.match('[([]', s)
+		if opparenmatch is not None:
+			opparen = opparenmatch[0]
+			return s[len(opparen):], TreeNode(None, [], ['op', '_' + opparen, 2]), ('val',)
 	if 'cparen' in types:
 		cparenmatch = re.match('[])]', s)
 		if cparenmatch is not None:
@@ -83,6 +87,8 @@ precedence = {
 	('_', 1): 200,
 	('[', 1): 100,
 	('(', 1): 100,
+	('_(', 2): 100,
+	('_[', 2): 100,
 	(',', 2): 90,
 	('+', 2): 20,
 	('-', 2): 20,
@@ -96,6 +102,8 @@ insertprecedence = {
 	**precedence,
 	('(', 1): 5,
 	('[', 1): 5,
+	('_(', 2): 5,
+	('_[', 2): 5,
 }
 
 prefixness = {
@@ -103,6 +111,8 @@ prefixness = {
 	('-', 1): True,
 	('(', 1): True,
 	('[', 1): True,
+	('_(', 2): False,
+	('_[', 2): False,
 	(',', 2): False,
 	('+', 2): False,
 	('-', 2): False,
@@ -159,6 +169,8 @@ def addcommatotree(bottom, comma) -> None:
 parens = {
 	('(', 1): ')',
 	('[', 1): ']',
+	('_(', 2): ')',
+	('_[', 2): ']',
 }
 
 def unmatched(paren, match):
@@ -177,6 +189,8 @@ def unmatched(paren, match):
 parenmatches = {
 	(('(', 1), ')'): ('op', '()', 1),
 	(('[', 1), ']'): ('op', '[]', 1),
+	(('_(', 2), ')'): ('op', '_()', 2),
+	(('_[', 2), ']'): ('op', '_[]', 2),
 }
 
 def closeparen(paren, match):
