@@ -29,9 +29,11 @@ def parseexpr(expr: str) -> typing.Any:
 	nexttype = 'val'
 
 	while True:
+		print(s)
 		print(tree)
 		if s.strip() == '':
 			break
+		print()
 		s,token,nexttype = parsetoken(nexttype, s)
 		tokentype = token.data[0]
 		if tokentype == 'val':
@@ -48,7 +50,7 @@ def parseexpr(expr: str) -> typing.Any:
 def parsetoken(typ, s: str):
 	s = s.strip()
 	if typ == 'val':
-		opmatch = re.match('[(+-]', s)
+		opmatch = re.match('[([+-]', s)
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 1]), 'val'
@@ -62,16 +64,17 @@ def parsetoken(typ, s: str):
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 2]), 'val'
-		parenmatch = re.match('[)]', s)
-		if parenmatch is not None:
-			paren = parenmatch[0]
-			return s[len(paren):], TreeNode(None, [], ('paren', paren)), 'op'
+		cparenmatch = re.match('[])]', s)
+		if cparenmatch is not None:
+			cparen = cparenmatch[0]
+			return s[len(cparen):], TreeNode(None, [], ('paren', cparen)), 'op'
 		raise ValueError('no match')
 	raise ValueError('no match')
 
 # high number = bind loose
 precedence = {
 	('_', 1): 200,
+	('[', 1): 100,
 	('(', 1): 100,
 	('+', 2): 20,
 	('-', 2): 20,
@@ -84,12 +87,14 @@ precedence = {
 insertprecedence = {
   **precedence,
   ('(', 1): 5,
+  ('[', 1): 5,
 }
 
 prefixness = {
 	('+', 1): True,
 	('-', 1): True,
 	('(', 1): True,
+	('[', 1): True,
 	('+', 2): False,
 	('-', 2): False,
 	('*', 2): False,
@@ -133,7 +138,8 @@ def addoptotree(bottom, op) -> None:
 		other.children.append(op)
 
 parens = {
-  ('(', 1): ')'
+  ('(', 1): ')',
+  ('[', 1): ']',
 }
 
 def unmatched(paren, match):
@@ -150,7 +156,8 @@ def unmatched(paren, match):
 	return True
 
 parenmatches = {
-	(('(', 1), ')'): ('op', '()', 1)
+	(('(', 1), ')'): ('op', '()', 1),
+	(('[', 1), ']'): ('op', '[]', 1),
 }
 
 def closeparen(paren, match):
