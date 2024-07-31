@@ -26,15 +26,16 @@ def parseexpr(expr: str) -> typing.Any:
 	tree = TreeNode(None, [], ['op', '_', 1])
 	bottom = tree
 
-	nexttype = 'val'
+	nexttypes = ('val',)
 
 	while True:
 		print(s)
+		print(nexttypes)
 		print(tree)
 		if s.strip() == '':
 			break
 		print()
-		s,token,nexttype = parsetoken(nexttype, s)
+		s,token,nexttypes = parsetoken(nexttypes, s)
 		tokentype = token.data[0]
 		if tokentype == 'val':
 			addvaltotree(bottom, token)
@@ -43,32 +44,38 @@ def parseexpr(expr: str) -> typing.Any:
 			addoptotree(bottom, token)
 			bottom = token
 		if tokentype == 'paren':
-		  addparentotree(bottom, token)
-		  bottom = token
+			addparentotree(bottom, token)
+			bottom = token
+		if tokentype == 'comma':
+			addoptotree(bottom, token)
+			bottom = token
 	return tree
 
-def parsetoken(typ, s: str):
+def parsetoken(types, s: str):
 	s = s.strip()
-	if typ == 'val':
+	if 'val' in types:
 		opmatch = re.match('[([+-]', s)
 		if opmatch is not None:
 			op = opmatch[0]
-			return s[len(op):], TreeNode(None, [], ['op', op, 1]), 'val'
+			return s[len(op):], TreeNode(None, [], ['op', op, 1]), ('val',)
 		symbolmatch = re.match('[a-zA-Z_][a-zA-Z_0-9]*', s)
 		if symbolmatch is not None:
 			symbol = symbolmatch[0]
-			return s[len(symbol):], TreeNode(None, [], ('val', symbol)), 'op'
-		raise ValueError('no match')
-	if typ == 'op':
+			return s[len(symbol):], TreeNode(None, [], ('val', symbol)), ('op', 'cparen')
+	if 'op' in types:
 		opmatch = re.match('[+\\-*/]', s)
 		if opmatch is not None:
 			op = opmatch[0]
-			return s[len(op):], TreeNode(None, [], ['op', op, 2]), 'val'
+			return s[len(op):], TreeNode(None, [], ['op', op, 2]), ('val',)
+		commamatch = re.match('[,]', s)
+		if commamatch is not None:
+			comma = commamatch[0]
+			return s[len(comma):], TreeNode(None, [], ['comma', comma, 2]), ('val', 'cparen')
+	if 'cparen' in types:
 		cparenmatch = re.match('[])]', s)
 		if cparenmatch is not None:
 			cparen = cparenmatch[0]
-			return s[len(cparen):], TreeNode(None, [], ('paren', cparen)), 'op'
-		raise ValueError('no match')
+			return s[len(cparen):], TreeNode(None, [], ('paren', cparen)), ('op', 'cparen')
 	raise ValueError('no match')
 
 # high number = bind loose
@@ -76,6 +83,7 @@ precedence = {
 	('_', 1): 200,
 	('[', 1): 100,
 	('(', 1): 100,
+	(',', 2): 90,
 	('+', 2): 20,
 	('-', 2): 20,
 	('*', 2): 10,
@@ -85,9 +93,9 @@ precedence = {
 }
 
 insertprecedence = {
-  **precedence,
-  ('(', 1): 5,
-  ('[', 1): 5,
+	**precedence,
+	('(', 1): 5,
+	('[', 1): 5,
 }
 
 prefixness = {
@@ -95,6 +103,7 @@ prefixness = {
 	('-', 1): True,
 	('(', 1): True,
 	('[', 1): True,
+	(',', 2): False,
 	('+', 2): False,
 	('-', 2): False,
 	('*', 2): False,
@@ -114,7 +123,7 @@ def goesabove(op, highop) -> bool:
 	_,highopname,higharity = highop.data
 	highopkey = highopname, higharity
 	if highopkey not in precedence:
-	  return True
+		return True
 	if insertprecedence[opkey] > precedence[highopkey]:
 		return True
 	return False
@@ -137,9 +146,19 @@ def addoptotree(bottom, op) -> None:
 	else:
 		other.children.append(op)
 
+def addcommatotree(bottom, comma) -> None:
+	other = bottom
+	while goesabove(comma, other):
+		other = other.parent
+	comma.parent = other
+	lastchild = other.children[-1]
+	lastchild.parent = comma
+	other.children[-1] = comma
+	comma.children.append(lastchild)
+
 parens = {
-  ('(', 1): ')',
-  ('[', 1): ']',
+	('(', 1): ')',
+	('[', 1): ']',
 }
 
 def unmatched(paren, match):
@@ -150,7 +169,7 @@ def unmatched(paren, match):
 	_,matchname,matcharity = match.data
 	matchkey = matchname, matcharity
 	if matchkey not in parens:
-	  return True
+		return True
 	if parens[matchkey] == parenkey:
 		return False
 	return True
