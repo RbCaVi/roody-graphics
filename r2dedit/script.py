@@ -66,11 +66,11 @@ def parsetoken(types, s: str):
 		symbolmatch = re.match('[a-zA-Z_][a-zA-Z_0-9]*', s)
 		if symbolmatch is not None:
 			symbol = symbolmatch[0]
-			return s[len(symbol):], TreeNode(None, [], ('val', symbol)), ('op', 'cparen')
+			return s[len(symbol):], TreeNode(None, [], ('val', 'var', symbol)), ('op', 'cparen')
 		nummatch = re.match('[0-9]+', s)
 		if nummatch is not None:
 			num = nummatch[0]
-			return s[len(num):], TreeNode(None, [], ('val', int(num))), ('op', 'cparen')
+			return s[len(num):], TreeNode(None, [], ('val', 'int', int(num))), ('op', 'cparen')
 	if 'op' in types:
 		opmatch = re.match('[+\\-*/]', s)
 		if opmatch is not None:
