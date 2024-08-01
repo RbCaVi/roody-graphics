@@ -57,7 +57,7 @@ def parseexpr(expr: str) -> typing.Any:
 
 def parsetoken(types, s: str):
 	sorig = s
-	s = s.strip()
+	s = strip(s)
 	if 'val' in types:
 		opmatch = re.match('[([+-]', s)
 		if opmatch is not None:
@@ -264,7 +264,7 @@ def many(p):
 
 def string(pat):
 	def parsestring(s):
-		sp = s.strip()
+		sp = strip(s)
 		if sp.startswith(pat):
 			return pat, sp[len(pat):]
 		return None, s
@@ -272,7 +272,7 @@ def string(pat):
 
 def regex(reg):
 	def parseregex(s):
-		sp = s.strip()
+		sp = strip(s)
 		match = re.match(reg, sp)
 		if match is not None:
 			return match[0], sp[len(match[0]):]
@@ -298,3 +298,6 @@ def choose(*ps):
 				return t, sp
 		return None, s
 	return parsechoose
+
+def strip(s):
+	return s.strip()
