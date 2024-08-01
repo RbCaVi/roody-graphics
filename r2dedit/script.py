@@ -36,6 +36,8 @@ def parseexpr(expr: str) -> typing.Any:
 			break
 		#print()
 		snext,token,nexttypes = parsetoken(nexttypes, s)
+		if token is None:
+			break
 		tokentype = token.data[0]
 		if tokentype == 'val':
 			addvaltotree(bottom, token)
@@ -56,6 +58,7 @@ def parseexpr(expr: str) -> typing.Any:
 	return tree, s
 
 def parsetoken(types, s: str):
+	sorig = s
 	s = s.strip()
 	if 'val' in types:
 		opmatch = re.match('[([+-]', s)
@@ -84,6 +87,7 @@ def parsetoken(types, s: str):
 		if cparenmatch is not None:
 			cparen = cparenmatch[0]
 			return s[len(cparen):], TreeNode(None, [], ('paren', cparen)), ('op', 'cparen')
+	return sorig, None, None
 	raise ValueError('no match')
 
 # high number = bind loose
