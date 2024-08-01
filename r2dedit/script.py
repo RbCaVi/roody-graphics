@@ -338,6 +338,23 @@ def evalexpr(e, scope):
 		op = op,arity
 		if op == ('_', 1):
 			return evalexpr(e.children[0], scope)
+		if op == ('+', 2):
+			return evalexpr(e.children[0], scope) + evalexpr(e.children[1], scope)
+		if op == ('[]', 1):
+			l = []
+			if len(e.children) == 0:
+				return l
+			c = e.children[0]
+			while c.data[0] == 'comma':
+				l.append(evalexpr(c.children[0], scope))
+				if len(c.children) == 2:
+					c = c.children[1]
+				else:
+					c = None
+					break
+			if c is not None:
+				l.append(evalexpr(c, scope))
+			return l
 		raise 0
 	if e.data[0] == 'val':
 		_val,typ,val = e.data
