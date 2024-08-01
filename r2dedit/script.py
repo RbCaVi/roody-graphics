@@ -315,8 +315,8 @@ def strip(s):
 def geti(x, i):
 	return x[i]
 
-def seti(x, vi):
-	v,i = vi
+def seti(v, xi):
+	x,i = xi
 	x[i] = v
 	return x
 
@@ -328,7 +328,6 @@ def execute(code):
 			idxs = [evalexpr(idx, scope) for idx in idxs]
 			val = evalexpr(e, scope)
 			stack = itertools.accumulate(idxs, geti, initial = scope.get(var))
-			print(val)
 			scope[var] = functools.reduce(seti, reversed(list(zip(stack, idxs))), val) # immutable works too
 	return scope
 
