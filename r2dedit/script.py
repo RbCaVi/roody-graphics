@@ -239,7 +239,7 @@ def parseset(line):
 	if t is None:
 		return None, s
 	var,idxs,_eq,e = t
-	return (var, idxs, e), s
+	return ('set', var, idxs, e), s
 
 def chain(*ps):
 	def parsechain(s):
@@ -283,3 +283,20 @@ def regex(reg):
 
 def parsesym(s):
 	return regex('[a-zA-Z_][a-zA-Z_0-9]*')(s)
+
+def parsecode(code):
+	t,s = many(choose(
+		parseset,
+	))(code)
+	if t is None:
+		return None, s
+	return t, s
+
+def choose(*ps):
+	def parsechoose(s):
+		for p in ps:
+			t,sp = p(s)
+			if t is not None:
+				return t, sp
+		return None, s
+	return parsechoose
