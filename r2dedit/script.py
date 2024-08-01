@@ -61,10 +61,14 @@ def parsetoken(types, s: str):
 	sorig = s
 	s = strip(s)
 	if 'val' in types:
-		opmatch = re.match('[([+-]', s)
+		opmatch = re.match('[+-]', s)
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 1]), ('val',)
+		openparenmatch = re.match('[([]', s)
+		if openparenmatch is not None:
+			openparen = openparenmatch[0]
+			return s[len(openparen):], TreeNode(None, [], ['op', openparen, 1]), ('val', 'cparen')
 		symbolmatch = re.match('[a-zA-Z_][a-zA-Z_0-9]*', s)
 		if symbolmatch is not None:
 			symbol = symbolmatch[0]
