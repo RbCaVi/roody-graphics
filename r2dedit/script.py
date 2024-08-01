@@ -359,5 +359,7 @@ def evalexpr(e, scope):
 		_val,typ,val = e.data
 		if typ == 'int':
 			return val
+		if typ == 'var':
+			return scope[val]
 	print(e)
 	raise 0
