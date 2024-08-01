@@ -216,16 +216,16 @@ def addparentotree(bottom, paren) -> None:
 
 def parseidx(s):
 	return chain(
-		pstr('['),
+		string('['),
 		parseexpr,
-		pstr(']'),
+		string(']'),
 	)(s)
 
 def parseset(line):
 	return chain(
 		parsesym,
 		many(parseidx),
-		pstr('='),
+		string('='),
 		parseexpr,
 	)(line)
 
@@ -252,13 +252,13 @@ def many(p):
 			out.append(t)
 	return parsemany
 
-def pstr(pat):
-	def parsestr(s):
+def string(pat):
+	def parsestring(s):
 		sp = s.strip()
 		if sp.startswith(pat):
 			return pat, sp[len(pat):]
 		return None, s
-	return parsestr
+	return parsestring
 
 def regex(reg):
 	def parseregex(s):
