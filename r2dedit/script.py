@@ -215,19 +215,27 @@ def addparentotree(bottom, paren) -> None:
 	paren.data = closeparen(paren, other)
 
 def parseidx(s):
-	return chain(
+	t,s = chain(
 		string('['),
 		parseexpr,
 		string(']'),
 	)(s)
+	if t is None:
+		return None, s
+	_lbr,e,_rbr = t
+	return e, s
 
 def parseset(line):
-	return chain(
+	t,s = chain(
 		parsesym,
 		many(parseidx),
 		string('='),
 		parseexpr,
 	)(line)
+	if t is None:
+		return None, s
+	var,idxs,_eq,e = t
+	return (var, idxs, e), s
 
 def chain(*ps):
 	def parsechain(s):
