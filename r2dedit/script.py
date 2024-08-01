@@ -305,3 +305,8 @@ def choose(*ps):
 
 def strip(s):
 	return s.strip()
+
+def execute(code):
+	for stmt in code:
+		if stmt[0] == 'set':
+			pass
