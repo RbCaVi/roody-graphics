@@ -2,6 +2,8 @@
 
 import re
 import typing
+import itertools
+import functools
 
 class TreeNode:
 	parent: typing.Self | None
@@ -306,7 +308,36 @@ def choose(*ps):
 def strip(s):
 	return s.strip()
 
+def geti(x, i):
+	return x[i]
+
+def seti(x, vi):
+	v,i = vi
+	x[i] = v
+	return x
+
 def execute(code):
+	scope = {}
 	for stmt in code:
 		if stmt[0] == 'set':
-			pass
+			_set,var,idxs,e = stmt
+			idxs = [evalexpr(idx, scope) for idx in idxs]
+			val = evalexpr(e, scope)
+			stack = itertools.accumulate(idxs, geti, initial = scope.get(var))
+			print(val)
+			scope[var] = functools.reduce(seti, reversed(list(zip(stack, idxs))), val) # immutable works too
+	return scope
+
+def evalexpr(e, scope):
+	if e.data[0] == 'op':
+		_op,op,arity = e.data
+		op = op,arity
+		if op == ('_', 1):
+			return evalexpr(e.children[0], scope)
+		raise 0
+	if e.data[0] == 'val':
+		_val,typ,val = e.data
+		if typ == 'int':
+			return val
+	print(e)
+	raise 0
