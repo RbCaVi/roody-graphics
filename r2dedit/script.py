@@ -78,7 +78,7 @@ def parsetoken(types, s: str):
 			num = nummatch[0]
 			return s[len(num):], TreeNode(None, [], ('val', 'int', int(num))), ('op', 'cparen')
 	if 'op' in types:
-		opmatch = re.match('[+\\-*/]', s)
+		opmatch = re.match('><|==|!=|>=|<=|<|>|[+\\-*/]', s)
 		if opmatch is not None:
 			op = opmatch[0]
 			return s[len(op):], TreeNode(None, [], ['op', op, 2]), ('val',)
@@ -112,6 +112,13 @@ precedence = {
 	('/', 2): 10,
 	('+', 1): 5,
 	('-', 1): 5,
+	('>', 2): 2,
+	('<', 2): 2,
+	('>=', 2): 2,
+	('<=', 2): 2,
+	('==', 2): 2,
+	('!=', 2): 2,
+	('<>', 2): 2,
 }
 
 insertprecedence = {
@@ -134,6 +141,13 @@ prefixness = {
 	('-', 2): False,
 	('*', 2): False,
 	('/', 2): False,
+	('>', 2): False,
+	('<', 2): False,
+	('>=', 2): False,
+	('<=', 2): False,
+	('==', 2): False,
+	('!=', 2): False,
+	('<>', 2): False,
 }
 
 def addvaltotree(bottom, val) -> None:
@@ -293,9 +307,7 @@ def parsesym(s):
 	return regex('[a-zA-Z_][a-zA-Z_0-9]*')(s)
 
 def parsecode(code):
-	t,s = many(choose(
-		parseset,
-	))(code)
+	t,s = many(parsestmt)(code)
 	if t is None:
 		return None, s
 	return t, s
@@ -337,8 +349,14 @@ def evalexpr(e, scope):
 		op = op,arity
 		if op == ('_', 1):
 			return evalexpr(e.children[0], scope)
+		if op == ('*', 2):
+			return evalexpr(e.children[0], scope) * evalexpr(e.children[1], scope)
 		if op == ('+', 2):
 			return evalexpr(e.children[0], scope) + evalexpr(e.children[1], scope)
+		if op == ('<', 2):
+			return evalexpr(e.children[0], scope) < evalexpr(e.children[1], scope)
+		if op == ('_[]', 2):
+			return evalexpr(e.children[0], scope)[evalexpr(e.children[1], scope)]
 		if op == ('[]', 1):
 			l = []
 			if len(e.children) == 0:
@@ -354,6 +372,7 @@ def evalexpr(e, scope):
 			if c is not None:
 				l.append(evalexpr(c, scope))
 			return l
+		print(e)
 		raise 0
 	if e.data[0] == 'val':
 		_val,typ,val = e.data
@@ -363,3 +382,41 @@ def evalexpr(e, scope):
 			return scope[val]
 	print(e)
 	raise 0
+
+def manystopped(p, stop):
+	def parsemanystopped(s):
+		sp = s
+		out = []
+		while True:
+			st,stp = stop(sp)
+			if st is not None:
+				return out, stp
+			t,sp = p(sp)
+			if t is None:
+				return None, s
+			out.append(t)
+	return parsemanystopped
+
+def parseif(s):
+	t,s = chain(
+		string('if'),
+		parseexpr,
+		string('then'),
+		manystopped(
+			parsestmt,
+			string('endif')
+		)
+	)(s)
+	if t is None:
+		return None, s
+	_,cond,_,code = t
+	return ('if', cond, code), s
+
+def parsestmt(s):
+	t,s = choose(
+		parseset,
+		parseif,
+	)(s)
+	if t is None:
+		return None, s
+	return t, s	raise 0
