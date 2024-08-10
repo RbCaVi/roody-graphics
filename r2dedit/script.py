@@ -332,15 +332,20 @@ def seti(v, xi):
 	x[i] = v
 	return x
 
-def execute(code):
-	scope = {}
+def execute(code, scope = None):
+	if scope is None:
+		scope = {}
 	for stmt in code:
 		if stmt[0] == 'set':
 			_set,var,idxs,e = stmt
 			idxs = [evalexpr(idx, scope) for idx in idxs]
 			val = evalexpr(e, scope)
 			stack = itertools.accumulate(idxs, geti, initial = scope.get(var))
-			scope[var] = functools.reduce(seti, reversed(list(zip(stack, idxs))), val) # immutable works too
+			scope[var] = functools.reduce(seti, reversed(list(zip(stack, idxs))), val)
+		if stmt[0] == 'if':
+			_if,cond,code = stmt
+			if evalexpr(cond, scope):
+			  execute(code, scope)
 	return scope
 
 def evalexpr(e, scope):
@@ -349,6 +354,8 @@ def evalexpr(e, scope):
 		op = op,arity
 		if op == ('_', 1):
 			return evalexpr(e.children[0], scope)
+		if op == ('-', 1):
+			return -evalexpr(e.children[0], scope)
 		if op == ('*', 2):
 			return evalexpr(e.children[0], scope) * evalexpr(e.children[1], scope)
 		if op == ('+', 2):
@@ -419,4 +426,4 @@ def parsestmt(s):
 	)(s)
 	if t is None:
 		return None, s
-	return t, s	raise 0
+	return t, s
