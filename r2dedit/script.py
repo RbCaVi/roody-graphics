@@ -354,6 +354,9 @@ def execute(code, scope = None):
 			for i in range(startval, endval + 1):
 				scope[var] = i
 				execute(code, scope)
+		if stmt[0] == 'expr':
+			_expr,e = stmt
+			evalexpr(e, scope)
 	return scope
 
 def evalexpr(e, scope):
@@ -361,6 +364,8 @@ def evalexpr(e, scope):
 		_op,op,arity = e.data
 		op = op,arity
 		if op == ('_', 1):
+			return evalexpr(e.children[0], scope)
+		if op == ('()', 1):
 			return evalexpr(e.children[0], scope)
 		if op == ('-', 1):
 			return -evalexpr(e.children[0], scope)
@@ -373,21 +378,19 @@ def evalexpr(e, scope):
 		if op == ('_[]', 2):
 			return evalexpr(e.children[0], scope)[evalexpr(e.children[1], scope)]
 		if op == ('[]', 1):
-			l = []
 			if len(e.children) == 0:
-				return l
-			c = e.children[0]
-			while c.data[0] == 'comma':
-				l.append(evalexpr(c.children[0], scope))
-				if len(c.children) == 2:
-					c = c.children[1]
-				else:
-					c = None
-					break
-			if c is not None:
-				l.append(evalexpr(c, scope))
-			return l
-		print(e)
+				return []
+			return [
+				evalexpr(c, scope)
+				for c in flattencomma(e.children[0])
+			]
+		if op == ('_()', 2):
+			f,args = e.children
+			return evalexpr(f, scope)(*[
+				evalexpr(c, scope)
+				for c in flattencomma(args)
+			])
+		print('what is this???', e)
 		raise 0
 	if e.data[0] == 'val':
 		_val,typ,val = e.data
@@ -432,6 +435,9 @@ def parsestmt(s):
 		parseset,
 		parseif,
 		parsefor,
+		parseemptystmt,
+		parseparenstmt,
+		parseexprstmt,
 	)(s)
 	if t is None:
 		return None, s
@@ -465,3 +471,42 @@ def optional(p, default):
 			return default, s
 		return t, sp
 	return parseoptional
+
+def parseemptystmt(s):
+	t,s = string(';')(s)
+	if t is None:
+		return None, s
+	return ('empty',), s
+
+def parseexprstmt(s):
+	t,s = parseexpr(s)
+	if t is None:
+		return None, s
+	if len(t.children) == 0:
+		return None, s
+	return ('expr', t), s
+
+def parseparenstmt(s):
+	t,s = chain(
+		string('('),
+		parsestmt,
+		string(')')
+	)(s)
+	if t is None:
+		return None, s
+	_lpar,stmt,_rpar = t
+	return stmt, s
+
+def flattencomma(e):
+	l = []
+	c = e
+	while c.data[0] == 'comma':
+		l.append(c.children[0])
+		if len(c.children) == 2:
+			c = c.children[1]
+		else:
+			c = None
+			break
+	if c is not None:
+		l.append(c)
+	return l
