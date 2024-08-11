@@ -346,6 +346,14 @@ def execute(code, scope = None):
 			_if,cond,code = stmt
 			if evalexpr(cond, scope):
 			  execute(code, scope)
+		if stmt[0] == 'for':
+			_for,var,start,end,code = stmt
+			assert end is not None
+			startval = evalexpr(start, scope)
+			endval = evalexpr(end, scope)
+			for i in range(startval, endval + 1):
+				scope[var] = i
+				execute(code, scope)
 	return scope
 
 def evalexpr(e, scope):
@@ -416,14 +424,44 @@ def parseif(s):
 	)(s)
 	if t is None:
 		return None, s
-	_,cond,_,code = t
+	_if,cond,_then,code = t
 	return ('if', cond, code), s
 
 def parsestmt(s):
 	t,s = choose(
 		parseset,
 		parseif,
+		parsefor,
 	)(s)
 	if t is None:
 		return None, s
 	return t, s
+
+def parsefor(s):
+	t,s = chain(
+		string('for'),
+		parsesym,
+		string('from'),
+		parseexpr,
+		optional(chain(
+			string('to'),
+			parseexpr
+		), ('to', None)),
+		string('do'),
+		manystopped(
+			parsestmt,
+			string('endfor')
+		)
+	)(s)
+	if t is None:
+		return None, s
+	_for,var,_from,start,(_to,end),_do,code = t
+	return ('for', var, start, end, code), s
+
+def optional(p, default):
+	def parseoptional(s):
+		t,sp = p(s)
+		if t is None:
+			return default, s
+		return t, sp
+	return parseoptional
